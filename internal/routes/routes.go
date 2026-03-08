@@ -11,6 +11,7 @@ func SetupRoutes(r *gin.Engine) {
 	r.GET("/projects", controllers.GetProjects)
 	r.GET("/projects/:id", controllers.GetProject)
 	r.PUT("/projects/:id", controllers.UpdateProject)
+	r.DELETE("/projects/:id", controllers.DeleteProject)
 
 	r.POST("/products", controllers.CreateProduct)
 	r.GET("/products", controllers.GetProducts)
