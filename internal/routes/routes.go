@@ -16,4 +16,12 @@ func SetupRoutes(r *gin.Engine) {
 	r.POST("/products", controllers.CreateProduct)
 	r.GET("/products", controllers.GetProducts)
 	r.GET("/products/:id", controllers.GetProduct)
+	r.PUT("/projects/:id", controllers.UpdateProject)
+	r.DELETE("/projects/:id", controllers.DeleteProject)
+
+	r.POST("/users", controllers.CreateUser)
+	r.GET("/users", controllers.GetUsers)
+	r.GET("/users/:id", controllers.GetUser)
+	r.PUT("/users/:id", controllers.UpdateUser)
+	r.DELETE("/users/:id", controllers.DeleteUser)
 }

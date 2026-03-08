@@ -53,3 +53,48 @@ func GetProduct(c *gin.Context) {
 
 	c.JSON(http.StatusOK, product)
 }
+
+func UpdateProduct(c *gin.Context) {
+
+	id := c.Param("id")
+
+	product, err := services.GetProduct(id)
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+		return
+	}
+
+	// Bind incoming JSON to existing project
+	if err := c.ShouldBindJSON(&product); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = services.UpdateProduct(&product)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, product)
+}
+
+func DeleteProduct(c *gin.Context) {
+	id := c.Param("id")
+
+	product, err := services.GetProduct(id)
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+		return
+	}
+	err = services.DeleteProduct(&product)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusNoContent, product)
+
+}
