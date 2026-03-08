@@ -79,3 +79,22 @@ func UpdateProject(c *gin.Context) {
 
 	c.JSON(http.StatusOK, project)
 }
+
+func DeleteProject(c *gin.Context) {
+	id := c.Param("id")
+
+	project, err := services.GetProject(id)
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+		return
+	}
+	err = services.DeleteProject(&project)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusNoContent, project)
+
+}
