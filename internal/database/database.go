@@ -25,6 +25,8 @@ func Connect() {
 		&models.Inventory{},
 		&models.Post{},
 		&models.Order{},
+		&models.LoginInput{},
+		&models.RegisterInput{},
 	)
 
 	if err != nil {
