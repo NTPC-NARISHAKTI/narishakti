@@ -13,7 +13,7 @@ func GetProducts() ([]models.Product, error) {
 
 	var products []models.Product
 
-	err := database.DB.Find(&products).Error
+	err := database.DB.Preload("Project").Find(&products).Error
 
 	return products, err
 }
@@ -22,7 +22,7 @@ func GetProductByID(id string) (models.Product, error) {
 
 	var product models.Product
 
-	err := database.DB.First(&product, id).Error
+	err := database.DB.Preload("Project").First(&product, id).Error
 
 	return product, err
 }

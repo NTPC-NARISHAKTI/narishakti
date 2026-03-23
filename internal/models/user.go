@@ -6,7 +6,7 @@ type User struct {
 	EmpNo          string
 	Name           string `gorm:"size:255;not null"`
 	PhoneNo        string `gorm:"size:20"`
-	ProjectID      uint
+	ProjectID      *uint
 	Project        Project
 	Email          string `gorm:"uniqueIndex"`
 	PasswordHash   string

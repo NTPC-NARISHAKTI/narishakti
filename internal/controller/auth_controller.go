@@ -10,10 +10,16 @@ import (
 )
 
 func Register(c *gin.Context) {
-	var user models.User
-	if err := c.ShouldBindJSON(&user); err != nil {
+	var input models.RegisterInput
+	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	user := models.User{
+		Name:         input.Name,
+		Email:        input.Email,
+		PasswordHash: input.Password, // It will be hashed inside RegisterUser service
 	}
 
 	createdUser, err := services.RegisterUser(&user)
