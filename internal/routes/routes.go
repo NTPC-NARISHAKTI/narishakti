@@ -33,6 +33,27 @@ func SetupRoutes(r *gin.Engine) {
 	auth.PUT("/users/:id", controllers.UpdateUser)
 	auth.DELETE("/users/:id", controllers.DeleteUser)
 
+	// Inventory routes
+	auth.POST("/inventories", controllers.CreateInventory)
+	auth.GET("/inventories", controllers.GetInventories)
+	auth.GET("/inventories/:id", controllers.GetInventory)
+	auth.PUT("/inventories/:id", controllers.UpdateInventory)
+	auth.DELETE("/inventories/:id", controllers.DeleteInventory)
+
+	// Post routes
+	auth.POST("/posts", controllers.CreatePost)
+	auth.GET("/posts", controllers.GetPosts)
+	auth.GET("/posts/:id", controllers.GetPost)
+	auth.PUT("/posts/:id", controllers.UpdatePost)
+	auth.DELETE("/posts/:id", controllers.DeletePost)
+
+	// Order routes
+	auth.POST("/orders", controllers.CreateOrder)
+	auth.GET("/orders", controllers.GetOrders)
+	auth.GET("/orders/:id", controllers.GetOrder)
+	auth.PUT("/orders/:id", controllers.UpdateOrder)
+	auth.DELETE("/orders/:id", controllers.DeleteOrder)
+
 	// Auth routes Public
 	r.POST("/register", controllers.Register)
 	r.POST("/login", controllers.Login)

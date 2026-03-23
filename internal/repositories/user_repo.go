@@ -32,7 +32,7 @@ func DeleteUser(user *models.User) error {
 // GetUserByEmail fetches a user by their email (for login)
 func GetUserByEmail(email string) (*models.User, error) {
 	var user models.User
-	err := database.DB.Where("email = ?", email).First(&user).Error
+	err := database.DB.Preload("Project").Where("email = ?", email).First(&user).Error
 	if err != nil {
 		return nil, err
 	}
