@@ -5,6 +5,7 @@ import (
 
 	"marketplace/internal/models"
 	"marketplace/internal/services"
+	"marketplace/internal/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -12,23 +13,25 @@ import (
 func Register(c *gin.Context) {
 	var input models.RegisterInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, utils.ErrorResponse("Invalid input", err.Error()))
 		return
 	}
 
 	user := models.User{
-		Name:         input.Name,
-		Email:        input.Email,
-		PasswordHash: input.Password, // It will be hashed inside RegisterUser service
+		Name:           input.Name,
+		Email:          input.Email,
+		PasswordHash:   input.Password, // It will be hashed inside RegisterUser service
+		Role:           "USER",
+		ApprovalStatus: "PENDING",
 	}
 
 	createdUser, err := services.RegisterUser(&user)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to register user", err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusCreated, createdUser)
+	c.JSON(http.StatusCreated, utils.SuccessResponse("User registered successfully", createdUser))
 }
 
 func Login(c *gin.Context) {
@@ -38,15 +41,15 @@ func Login(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, utils.ErrorResponse("Invalid input", err.Error()))
 		return
 	}
 
 	token, err := services.LoginUser(input.Email, input.Password)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Login failed", err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	c.JSON(http.StatusOK, utils.SuccessResponse("Login successful", gin.H{"token": token}))
 }

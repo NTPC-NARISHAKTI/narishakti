@@ -5,6 +5,7 @@ import (
 
 	"marketplace/internal/models"
 	"marketplace/internal/services"
+	"marketplace/internal/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,18 +15,18 @@ func CreateProject(c *gin.Context) {
 	var project models.Project
 
 	if err := c.ShouldBindJSON(&project); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, utils.ErrorResponse("Invalid input", err.Error()))
 		return
 	}
 
 	err := services.CreateProject(&project)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to create project", err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusCreated, project)
+	c.JSON(http.StatusCreated, utils.SuccessResponse("Project created successfully", project))
 }
 
 func GetProjects(c *gin.Context) {
@@ -33,11 +34,11 @@ func GetProjects(c *gin.Context) {
 	projects, err := services.GetProjects()
 
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, utils.ErrorResponse("Projects not found", err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, projects)
+	c.JSON(http.StatusOK, utils.SuccessResponse("Projects fetched successfully", projects))
 }
 
 func GetProject(c *gin.Context) {
@@ -47,11 +48,11 @@ func GetProject(c *gin.Context) {
 	Project, err := services.GetProject(id)
 
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+		c.JSON(http.StatusNotFound, utils.ErrorResponse("Project not found", "Project not found"))
 		return
 	}
 
-	c.JSON(http.StatusOK, Project)
+	c.JSON(http.StatusOK, utils.SuccessResponse("Project fetched successfully", Project))
 }
 
 func UpdateProject(c *gin.Context) {
@@ -61,23 +62,23 @@ func UpdateProject(c *gin.Context) {
 	project, err := services.GetProject(id)
 
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+		c.JSON(http.StatusNotFound, utils.ErrorResponse("Project not found", "Project not found"))
 		return
 	}
 
 	// Bind incoming JSON to existing project
 	if err := c.ShouldBindJSON(&project); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, utils.ErrorResponse("Invalid input", err.Error()))
 		return
 	}
 
 	err = services.UpdateProject(&project)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to update project", err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, project)
+	c.JSON(http.StatusOK, utils.SuccessResponse("Project updated successfully", project))
 }
 
 func DeleteProject(c *gin.Context) {
@@ -86,15 +87,15 @@ func DeleteProject(c *gin.Context) {
 	project, err := services.GetProject(id)
 
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+		c.JSON(http.StatusNotFound, utils.ErrorResponse("Project not found", "Project not found"))
 		return
 	}
 	err = services.DeleteProject(&project)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to delete project", err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusNoContent, project)
+	c.JSON(http.StatusNoContent, utils.SuccessResponse("Project deleted successfully", nil))
 
 }
