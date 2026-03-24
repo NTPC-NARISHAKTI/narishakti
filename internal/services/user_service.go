@@ -24,3 +24,21 @@ func UpdateUser(User *models.User) error {
 func DeleteUser(User *models.User) error {
 	return repositories.DeleteUser(User)
 }
+
+func ApproveUser(id string) error {
+	user, err := repositories.GetUserByID(id)
+	if err != nil {
+		return err
+	}
+	user.ApprovalStatus = "APPROVED"
+	return repositories.UpdateUser(&user)
+}
+
+func RejectUser(id string) error {
+	user, err := repositories.GetUserByID(id)
+	if err != nil {
+		return err
+	}
+	user.ApprovalStatus = "REJECTED"
+	return repositories.UpdateUser(&user)
+}
