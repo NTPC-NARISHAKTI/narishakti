@@ -5,6 +5,7 @@ import (
 
 	"marketplace/internal/models"
 	"marketplace/internal/services"
+	"marketplace/internal/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,27 +14,27 @@ func CreateInventory(c *gin.Context) {
 	var inventory models.Inventory
 
 	if err := c.ShouldBindJSON(&inventory); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, utils.ErrorResponse("Invalid input", err.Error()))
 		return
 	}
 
 	err := services.CreateInventory(&inventory)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to create inventory", err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, inventory)
+	c.JSON(http.StatusOK, utils.SuccessResponse("Inventory created successfully", inventory))
 }
 
 func GetInventories(c *gin.Context) {
 	inventories, err := services.GetInventories()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to fetch inventories", err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, inventories)
+	c.JSON(http.StatusOK, utils.SuccessResponse("Inventories fetched successfully", inventories))
 }
 
 func GetInventory(c *gin.Context) {
@@ -41,11 +42,11 @@ func GetInventory(c *gin.Context) {
 
 	inventory, err := services.GetInventory(id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Inventory not found"})
+		c.JSON(http.StatusNotFound, utils.ErrorResponse("Inventory not found", "Inventory not found"))
 		return
 	}
 
-	c.JSON(http.StatusOK, inventory)
+	c.JSON(http.StatusOK, utils.SuccessResponse("Inventory fetched successfully", inventory))
 }
 
 func UpdateInventory(c *gin.Context) {
@@ -53,22 +54,22 @@ func UpdateInventory(c *gin.Context) {
 
 	inventory, err := services.GetInventory(id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Inventory not found"})
+		c.JSON(http.StatusNotFound, utils.ErrorResponse("Inventory not found", "Inventory not found"))
 		return
 	}
 
 	if err := c.ShouldBindJSON(&inventory); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, utils.ErrorResponse("Invalid input", err.Error()))
 		return
 	}
 
 	err = services.UpdateInventory(&inventory)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to update inventory", err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, inventory)
+	c.JSON(http.StatusOK, utils.SuccessResponse("Inventory updated successfully", inventory))
 }
 
 func DeleteInventory(c *gin.Context) {
@@ -76,15 +77,15 @@ func DeleteInventory(c *gin.Context) {
 
 	inventory, err := services.GetInventory(id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Inventory not found"})
+		c.JSON(http.StatusNotFound, utils.ErrorResponse("Inventory not found", "Inventory not found"))
 		return
 	}
 
 	err = services.DeleteInventory(&inventory)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to delete inventory", err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusNoContent, inventory)
+	c.JSON(http.StatusNoContent, utils.SuccessResponse("Inventory deleted successfully", nil))
 }

@@ -33,6 +33,12 @@ func SetupRoutes(r *gin.Engine) {
 	auth.PUT("/users/:id", controllers.UpdateUser)
 	auth.DELETE("/users/:id", controllers.DeleteUser)
 
+	// Admin user routes
+	admin := auth.Group("/admin")
+	admin.Use(middleware.RoleMiddleware("ADMIN"))
+	r.PATCH("/users/:id/approve", controllers.ApproveUser)
+	r.PATCH("/users/:id/reject", controllers.RejectUser)
+
 	// Inventory routes
 	auth.POST("/inventories", controllers.CreateInventory)
 	auth.GET("/inventories", controllers.GetInventories)
@@ -41,7 +47,7 @@ func SetupRoutes(r *gin.Engine) {
 	auth.DELETE("/inventories/:id", controllers.DeleteInventory)
 
 	// Post routes
-	auth.POST("/posts", controllers.CreatePost)
+	auth.POST("/posts", middleware.RoleMiddleware("ADMIN"), controllers.CreatePost)
 	auth.GET("/posts", controllers.GetPosts)
 	auth.GET("/posts/:id", controllers.GetPost)
 	auth.PUT("/posts/:id", controllers.UpdatePost)

@@ -29,6 +29,13 @@ func LoginUser(email, password string) (string, error) {
 		return "", errors.New("user not found")
 	}
 
+	if user.ApprovalStatus == "PENDING" {
+		return "", errors.New("Approval pending")
+	}
+	if user.ApprovalStatus == "REJECTED" {
+		return "", errors.New("Registration rejected")
+	}
+
 	if !utils.CheckPasswordHash(password, user.PasswordHash) {
 		return "", errors.New("invalid password")
 	}
