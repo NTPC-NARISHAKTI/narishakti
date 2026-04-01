@@ -5,8 +5,16 @@ import (
 	"marketplace/internal/repositories"
 )
 
-func CreateProject(Project *models.Project) error {
-	return repositories.CreateProject(Project)
+func CreateProject(Project *models.Project, createdBy uint) error {
+	err := repositories.CreateProject(Project)
+	if err != nil {
+		return err
+	}
+
+	// Log the project creation
+	LogActivity("CREATED", "PROJECT", Project.ID, createdBy, "Project was created")
+
+	return nil
 }
 
 func GetProjects() ([]models.Project, error) {

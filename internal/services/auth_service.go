@@ -5,6 +5,7 @@ import (
 	"marketplace/internal/models"
 	"marketplace/internal/repositories"
 	"marketplace/internal/utils"
+	"strings"
 )
 
 func RegisterUser(user *models.User) (*models.User, error) {
@@ -23,27 +24,27 @@ func RegisterUser(user *models.User) (*models.User, error) {
 	return user, nil
 }
 
-func LoginUser(email, password string) (string, error) {
+func LoginUser(email, password string) (string, *models.User, error) {
 	user, err := repositories.GetUserByEmail(email)
 	if err != nil {
-		return "", errors.New("user not found")
+		return "", nil, errors.New("user not found")
 	}
 
-	if user.ApprovalStatus == "PENDING" {
-		return "", errors.New("Approval pending")
+	if strings.ToUpper(user.ApprovalStatus) == "PENDING" {
+		return "", nil, errors.New("Approval pending")
 	}
-	if user.ApprovalStatus == "REJECTED" {
-		return "", errors.New("Registration rejected")
+	if strings.ToUpper(user.ApprovalStatus) == "REJECTED" {
+		return "", nil, errors.New("Registration rejected")
 	}
 
 	if !utils.CheckPasswordHash(password, user.PasswordHash) {
-		return "", errors.New("invalid password")
+		return "", nil, errors.New("invalid password")
 	}
 
 	token, err := utils.GenerateJWT(user.ID, user.Email, user.Role)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
-	return token, nil
+	return token, user, nil
 }

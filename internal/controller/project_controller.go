@@ -19,7 +19,14 @@ func CreateProject(c *gin.Context) {
 		return
 	}
 
-	err := services.CreateProject(&project)
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "User not found in context"))
+		return
+	}
+	createdBy := uint(userID.(float64))
+
+	err := services.CreateProject(&project, createdBy)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to create project", err.Error()))

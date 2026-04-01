@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"strings"
 
 	"marketplace/internal/database"
 	"marketplace/internal/models"
@@ -11,12 +12,13 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-func CreatePost(post *models.Post, userRole string) error {
-	if userRole != "ADMIN" {
-		return errors.New("unauthorized: only admins can create posts")
+func CreatePost(post *models.Post, userRole string, createdBy uint) error {
+	userRoleUpper := strings.ToUpper(userRole)
+	if userRoleUpper != "ADMIN" && userRoleUpper != "CAPTAIN" {
+		return errors.New("unauthorized: only admins and captains can create posts")
 	}
 
-	return database.DB.Transaction(func(tx *gorm.DB) error {
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
 		// 1. Create Post
 		if err := tx.Create(post).Error; err != nil {
 			return err
@@ -40,10 +42,59 @@ func CreatePost(post *models.Post, userRole string) error {
 		// Record exists, increment quantity atomically
 		return tx.Model(&inv).Update("quantity", gorm.Expr("quantity + ?", post.TotalQty)).Error
 	})
+
+	if err != nil {
+		return err
+	}
+
+	// Log the post creation
+	LogActivity("CREATED", "POST", post.ID, createdBy, "Post was created and inventory was updated")
+
+	return nil
 }
 
 func GetPosts() ([]models.Post, error) {
 	return repositories.GetPosts()
+}
+
+// GetPostsWithRemainingQty returns posts with calculated remaining quantity
+func GetPostsWithRemainingQty() ([]map[string]interface{}, error) {
+	posts, err := repositories.GetPosts()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []map[string]interface{}
+
+	for _, post := range posts {
+		// Calculate remaining quantity (TotalQty - sum of confirmed order quantities)
+		var confirmedOrdersQty int64
+		database.DB.Model(&models.Order{}).
+			Where("post_id = ? AND order_status = ?", post.ID, "CONFIRMED").
+			Select("COALESCE(SUM(order_quantity), 0)").
+			Scan(&confirmedOrdersQty)
+
+		remainingQty := post.TotalQty - int(confirmedOrdersQty)
+		if remainingQty < 0 {
+			remainingQty = 0 // Prevent negative values
+		}
+
+		postData := map[string]interface{}{
+			"ID":           post.ID,
+			"CreatedAt":    post.CreatedAt,
+			"UpdatedAt":    post.UpdatedAt,
+			"ProductID":    post.ProductID,
+			"Product":      post.Product,
+			"ProductImg":   post.ProductImg,
+			"Price":        post.Price,
+			"TotalQty":     post.TotalQty,
+			"RemainingQty": remainingQty,
+			"TotalOrders":  post.TotalOrders,
+		}
+		result = append(result, postData)
+	}
+
+	return result, nil
 }
 
 func GetPost(id string) (models.Post, error) {

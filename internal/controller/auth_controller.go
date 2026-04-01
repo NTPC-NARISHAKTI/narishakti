@@ -45,11 +45,19 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	token, err := services.LoginUser(input.Email, input.Password)
+	token, user, err := services.LoginUser(input.Email, input.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Login failed", err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, utils.SuccessResponse("Login successful", gin.H{"token": token}))
+	c.JSON(http.StatusOK, utils.SuccessResponse("Login successful", gin.H{
+		"token": token,
+		"user": gin.H{
+			"id":    user.ID,
+			"name":  user.Name,
+			"email": user.Email,
+			"role":  user.Role,
+		},
+	}))
 }

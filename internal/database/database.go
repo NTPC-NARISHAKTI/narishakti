@@ -25,6 +25,7 @@ func Connect() {
 		&models.Inventory{},
 		&models.Post{},
 		&models.Order{},
+		&models.Log{},
 		&models.LoginInput{},
 		&models.RegisterInput{},
 	)

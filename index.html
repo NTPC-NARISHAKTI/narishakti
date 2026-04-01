@@ -1,0 +1,1757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marketplace Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .sidebar {
+            background-color: #2c3e50;
+            min-height: 100vh;
+            padding-top: 20px;
+            position: fixed;
+            width: 250px;
+            left: 0;
+            top: 0;
+        }
+
+        .sidebar a {
+            color: #ecf0f1;
+            text-decoration: none;
+            display: block;
+            padding: 15px 20px;
+            margin: 5px 0;
+            border-left: 4px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .sidebar a:hover,
+        .sidebar a.active {
+            background-color: #34495e;
+            border-left-color: #3498db;
+            color: #fff;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+
+        .header {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            border: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+
+        .btn-custom {
+            border-radius: 5px;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .table-responsive {
+            background-color: white;
+            border-radius: 8px;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .form-section {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-dismissible {
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .badge-custom {
+            padding: 6px 12px;
+            border-radius: 20px;
+        }
+
+        .loading {
+            display: none;
+        }
+
+        .loading.show {
+            display: inline-block;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: relative;
+                min-height: auto;
+                padding-top: 10px;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .sidebar a {
+                display: inline-block;
+                width: auto;
+                margin-right: 10px;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .auth-card {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .auth-card h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <!-- Auth Container (initially visible) -->
+    <div id="authContainer" class="auth-container">
+        <div class="auth-card">
+            <div class="logo">
+                <i class="bi bi-shop"></i> Marketplace
+            </div>
+            <ul class="nav nav-tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="login-tab" data-bs-toggle="tab" data-bs-target="#login" type="button">Login</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="register-tab" data-bs-toggle="tab" data-bs-target="#register" type="button">Register</button>
+                </li>
+            </ul>
+            <div class="tab-content mt-4">
+                <!-- Login Form -->
+                <div class="tab-pane fade show active" id="login" role="tabpanel">
+                    <form id="loginForm">
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="loginEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-control" id="loginPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Login</button>
+                    </form>
+                </div>
+
+                <!-- Register Form -->
+                <div class="tab-pane fade" id="register" role="tabpanel">
+                    <form id="registerForm">
+                        <div class="mb-3">
+                            <label class="form-label">Name</label>
+                            <input type="text" class="form-control" id="registerName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="registerEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-control" id="registerPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Register</button>
+                    </form>
+                </div>
+            </div>
+            <div id="authMessage" class="mt-3"></div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard (hidden until login) -->
+    <div id="dashboard" style="display: none;">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo" style="color: white; padding: 10px;">
+                <i class="bi bi-shop"></i> Marketplace
+            </div>
+            <a href="#" onclick="switchSection('dashboard')" class="sidebar-link active"><i class="bi bi-speedometer2"></i> Dashboard</a>
+            <a href="#" onclick="switchSection('users')" class="sidebar-link"><i class="bi bi-people"></i> Users</a>
+            <a href="#" onclick="switchSection('projects')" class="sidebar-link"><i class="bi bi-folder"></i> Projects</a>
+            <a href="#" onclick="switchSection('products')" class="sidebar-link"><i class="bi bi-box"></i> Products</a>
+            <a href="#" onclick="switchSection('posts')" class="sidebar-link"><i class="bi bi-file-text"></i> Posts</a>
+            <a href="#" onclick="switchSection('inventories')" class="sidebar-link"><i class="bi bi-list"></i> Inventories</a>
+            <a href="#" onclick="switchSection('orders')" class="sidebar-link"><i class="bi bi-cart"></i> Orders</a>
+            <a href="#" onclick="switchSection('logs')" class="sidebar-link"><i class="bi bi-journal-text"></i> Logs</a>
+            <hr style="background-color: #34495e;">
+            <a href="#" onclick="logout()" class="sidebar-link"><i class="bi bi-box-arrow-right"></i> Logout</a>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <h2><i class="bi bi-speedometer2"></i> Admin Dashboard</h2>
+                <div>
+                    <span id="userInfo" class="me-3">Welcome, <strong>User</strong></span>
+                    <span id="currentUserRole" class="badge bg-secondary me-3">Role: USER</span>
+                    <button onclick="logout()" class="btn btn-outline-danger btn-sm">Logout</button>
+                </div>
+            </div>
+
+            <!-- Dashboard Section -->
+            <div id="dashboard" class="section active">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Total Users</h6>
+                                <h2 id="totalUsers">0</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Total Projects</h6>
+                                <h2 id="totalProjects">0</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Total Products</h6>
+                                <h2 id="totalProducts">0</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Total Orders</h6>
+                                <h2 id="totalOrders">0</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Section -->
+            <div id="users" class="section">
+                <h3 class="mb-4">Manage Users</h3>
+                <div id="usersMessage"></div>
+
+                <div class="form-section">
+                    <h5>Add New User</h5>
+                    <form id="userForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Name</label>
+                                <input type="text" class="form-control" id="userName" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" id="userEmail" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Phone</label>
+                                <input type="text" class="form-control" id="userPhone">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Project</label>
+                                <select class="form-control" id="userProject">
+                                    <option value="">No Project</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Employee ID</label>
+                                <input type="text" class="form-control" id="userEmpNo" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Password</label>
+                                <input type="password" class="form-control" id="userPassword" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Confirm Password</label>
+                                <input type="password" class="form-control" id="userConfirmPassword" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Role</label>
+                                <select class="form-control" id="userRole" required>
+                                    <option value="USER" selected>USER</option>
+                                    <option value="CAPTAIN">CAPTAIN</option>
+                                    <option value="ADMIN">ADMIN</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary btn-custom">Save User</button>
+                                <button type="button" class="btn btn-secondary btn-custom" onclick="resetUserForm()">Clear</button>
+                                <button type="button" class="btn btn-info btn-custom" onclick="testUserForm()">Test Form</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Emp ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Project</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTable">
+                            <tr>
+                                <td colspan="8" class="text-center">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Projects Section -->
+            <div id="projects" class="section">
+                <h3 class="mb-4">Manage Projects</h3>
+                <div id="projectsMessage"></div>
+
+                <div class="form-section">
+                    <h5>Add New Project</h5>
+                    <form id="projectForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Project Name</label>
+                                <input type="text" class="form-control" id="projectName" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Address</label>
+                                <input type="text" class="form-control" id="projectAddress">
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary btn-custom">Save Project</button>
+                                <button type="button" class="btn btn-secondary btn-custom" onclick="resetProjectForm()">Clear</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Address</th>
+                                <th>Created At</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="projectsTable">
+                            <tr>
+                                <td colspan="5" class="text-center">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Products Section -->
+            <div id="products" class="section">
+                <h3 class="mb-4">Manage Products</h3>
+                <div id="productsMessage"></div>
+
+                <div class="form-section">
+                    <h5>Add New Product</h5>
+                    <form id="productForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Product Name</label>
+                                <input type="text" class="form-control" id="productName" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Project</label>
+                                <select class="form-control" id="productProject" required></select>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-control" id="productDescription" rows="3"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary btn-custom">Save Product</button>
+                                <button type="button" class="btn btn-secondary btn-custom" onclick="resetProductForm()">Clear</button>
+                                <button type="button" class="btn btn-info btn-custom" onclick="testProductForm()">Test Form</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Project</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productsTable">
+                            <tr>
+                                <td colspan="5" class="text-center">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Posts Section -->
+            <div id="posts" class="section">
+                <h3 class="mb-4">Manage Posts</h3>
+                <div id="postsMessage"></div>
+
+                <div class="form-section">
+                    <h5>Add New Post</h5>
+                    <form id="postForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Product</label>
+                                <select class="form-control" id="postProduct" required></select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Price</label>
+                                <input type="number" class="form-control" id="postPrice" step="0.01" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Total Quantity</label>
+                                <input type="number" class="form-control" id="postTotalQty" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Product Image</label>
+                                <input type="file" class="form-control" id="postImage" accept="image/*">
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary btn-custom">Save Post</button>
+                                <button type="button" class="btn btn-secondary btn-custom" onclick="resetPostForm()">Clear</button>
+                                <button type="button" class="btn btn-info btn-custom" onclick="testPostForm()">Test Form</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Product</th>
+                                <th>Price</th>
+                                <th>Total Qty</th>
+                                <th>Remaining Qty</th>
+                                <th>Orders</th>
+                                <th>Image</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="postsTable">
+                            <tr>
+                                <td colspan="6" class="text-center">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Inventories Section -->
+            <div id="inventories" class="section">
+                <h3 class="mb-4">Manage Inventories</h3>
+                <div id="inventoriesMessage"></div>
+
+                <div class="form-section">
+                    <h5>Add New Inventory</h5>
+                    <form id="inventoryForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Product</label>
+                                <select class="form-control" id="inventoryProduct" required></select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Quantity</label>
+                                <input type="number" class="form-control" id="inventoryQuantity" required>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary btn-custom">Save Inventory</button>
+                                <button type="button" class="btn btn-secondary btn-custom" onclick="resetInventoryForm()">Clear</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Product</th>
+                                <th>Quantity</th>
+                                <th>Last Updated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoriesTable">
+                            <tr>
+                                <td colspan="5" class="text-center">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Orders Section -->
+            <div id="orders" class="section">
+                <h3 class="mb-4">Manage Orders</h3>
+                <div id="ordersMessage"></div>
+
+                <div class="form-section">
+                    <h5>Add New Order</h5>
+                    <form id="orderForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Post</label>
+                                <select class="form-control" id="orderPost" required></select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">User</label>
+                                <select class="form-control" id="orderUser" required></select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Quantity</label>
+                                <input type="number" class="form-control" id="orderQuantity" required min="1">
+                                <small class="text-muted" id="quantityHelp">Available: Select a post first</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Total Price (Auto-calculated)</label>
+                                <input type="number" class="form-control" id="orderTotalPrice" step="0.01" readonly>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Status</label>
+                                <select class="form-control" id="orderStatus">
+                                    <option>PENDING</option>
+                                    <option>CONFIRMED</option>
+                                    <option>COMPLETED</option>
+                                    <option>CANCELLED</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary btn-custom">Save Order</button>
+                                <button type="button" class="btn btn-secondary btn-custom" onclick="resetOrderForm()">Clear</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Post</th>
+                                <th>User</th>
+                                <th>Qty</th>
+                                <th>Total Price</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTable">
+                            <tr>
+                                <td colspan="7" class="text-center">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Logs Section -->
+            <div id="logs" class="section">
+                <h3 class="mb-4">Activity Logs</h3>
+                <div id="logsMessage"></div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Action</th>
+                                <th>Entity Type</th>
+                                <th>Entity ID</th>
+                                <th>User</th>
+                                <th>Details</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTable">
+                            <tr>
+                                <td colspan="7" class="text-center">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalTitle">Edit Item</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="editModalBody">
+                    <!-- Dynamic content -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="editModalSave">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const API_URL = 'http://localhost:8080';
+        let authToken = localStorage.getItem('authToken');
+        let currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
+        let editingType = null;
+        let editingId = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Page loaded, checking auth token:', authToken);
+            if (authToken) {
+                showDashboard();
+                loadDashboardStats();
+            } else {
+                showAuth();
+            }
+        });
+
+        // Auth Functions
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+                if (response.ok && data.success && data.data && data.data.token) {
+                    authToken = data.data.token;
+                    currentUser = data.data.user || { name: 'User', role: 'USER' };
+                    localStorage.setItem('authToken', authToken);
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    showDashboard();
+                    loadDashboardStats();
+                } else {
+                    showMessage('authMessage', 'Login failed: ' + (data.error || data.message || 'Invalid credentials'), 'danger');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showMessage('authMessage', 'Error: Failed to connect to server. Make sure backend is running on ' + API_URL, 'danger');
+            }
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+
+            try {
+                const response = await fetch(`${API_URL}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password })
+                });
+
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    showMessage('authMessage', 'Registration successful! Please login.', 'success');
+                    document.getElementById('registerForm').reset();
+                    setTimeout(() => {
+                        document.getElementById('login-tab').click();
+                    }, 1500);
+                } else {
+                    showMessage('authMessage', 'Registration failed: ' + (data.error || data.message || 'Unknown error'), 'danger');
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                showMessage('authMessage', 'Error: Failed to connect to server. Make sure backend is running on ' + API_URL, 'danger');
+            }
+        });
+
+        function logout() {
+            authToken = null;
+            currentUser = {};
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            showAuth();
+            document.getElementById('loginForm').reset();
+        }
+
+        function showAuth() {
+            document.getElementById('authContainer').style.display = 'flex';
+            document.getElementById('dashboard').style.display = 'none';
+        }
+
+        function showDashboard() {
+            document.getElementById('authContainer').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('userInfo').innerHTML = `Welcome, <strong>${currentUser.name || 'User'}</strong>`;
+            document.getElementById('currentUserRole').innerHTML = `Role: <strong>${currentUser.role || 'USER'}</strong>`;
+            document.getElementById('userRole').className = `badge me-3 ${getRoleBadgeClass(currentUser.role || 'USER')}`;
+        }
+
+        function getRoleBadgeClass(role) {
+            switch(role) {
+                case 'ADMIN': return 'bg-danger';
+                case 'CAPTAIN': return 'bg-warning text-dark';
+                case 'USER': return 'bg-secondary';
+                default: return 'bg-secondary';
+            }
+        }
+
+        // Navigation
+        function switchSection(sectionName) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(sectionName).classList.add('active');
+
+            document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+            event.target.closest('.sidebar-link').classList.add('active');
+
+            // Load data for the section
+            if (sectionName === 'users') {
+                loadUsers();
+                loadProjectsForSelect('userProject');
+            }
+            if (sectionName === 'projects') loadProjects();
+            if (sectionName === 'products') {
+                loadProducts();
+                loadProjectsForSelect('productProject');
+            }
+            if (sectionName === 'posts') {
+                loadPosts();
+                loadProductsForSelect('postProduct');
+            }
+            if (sectionName === 'inventories') {
+                loadInventories();
+                loadProductsForSelect('inventoryProduct');
+            }
+            if (sectionName === 'orders') {
+                loadOrders();
+                loadPostsForSelect('orderPost');
+                loadUsersForSelect('orderUser');
+            }
+            if (sectionName === 'logs') {
+                loadLogs();
+            }
+        }
+
+        // Utility Functions
+        function showMessage(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>`;
+        }
+
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            console.log(`Making ${method} request to: ${API_URL}${endpoint}`);
+            const options = {
+                method,
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            };
+
+            if (body) {
+                options.headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify(body);
+                console.log('Request body:', body);
+            }
+
+            const response = await fetch(`${API_URL}${endpoint}`, options);
+            console.log(`Response status: ${response.status}`);
+            
+            if (!response.ok && response.status === 401) {
+                logout();
+                throw new Error('Unauthorized');
+            }
+            const data = await response.json();
+            console.log('Response data:', data);
+            return data;
+        }
+
+        async function apiCallWithFile(endpoint, method = 'POST', formData) {
+            console.log(`Making ${method} request to: ${API_URL}${endpoint}`);
+            const options = {
+                method,
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: formData
+            };
+
+            const response = await fetch(`${API_URL}${endpoint}`, options);
+            console.log(`Response status: ${response.status}`);
+            
+            if (!response.ok && response.status === 401) {
+                logout();
+                throw new Error('Unauthorized');
+            }
+            const data = await response.json();
+            console.log('Response data:', data);
+            return data;
+        }
+
+        // Dashboard Stats
+        async function loadDashboardStats() {
+            try {
+                const users = await apiCall('/users');
+                const projects = await apiCall('/projects');
+                const products = await apiCall('/products');
+                const orders = await apiCall('/orders');
+
+                document.getElementById('totalUsers').textContent = users.data?.length || 0;
+                document.getElementById('totalProjects').textContent = projects.data?.length || 0;
+                document.getElementById('totalProducts').textContent = products.data?.length || 0;
+                document.getElementById('totalOrders').textContent = orders.data?.length || 0;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        let users = []; // Global variable to store users data
+
+        // USERS
+        async function loadUsers() {
+            try {
+                const data = await apiCall('/users');
+                users = data.data || []; // Store users globally
+                const tbody = document.getElementById('usersTable');
+                tbody.innerHTML = users.map(user => `
+                    <tr>
+                        <td>${user.ID}</td>
+                        <td>${user.EmpNo || '-'}</td>
+                        <td>${user.Name}</td>
+                        <td>${user.Email}</td>
+                        <td>${user.PhoneNo || '-'}</td>
+                        <td>${user.Project?.Name || '-'}</td>
+                        <td><span class="badge badge-custom bg-info">${user.Role || 'USER'}</span></td>
+                        <td><span class="badge badge-custom ${user.ApprovalStatus && user.ApprovalStatus.toUpperCase() === 'APPROVED' ? 'bg-success' : 'bg-warning'}">${user.ApprovalStatus || 'PENDING'}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-warning" onclick="editUser(${user.ID})">Edit</button>
+                            ${user.ApprovalStatus && user.ApprovalStatus.toUpperCase() === 'PENDING' ? 
+                                `<button class="btn btn-sm btn-success" onclick="approveUser(${user.ID})">Approve</button>
+                                 <button class="btn btn-sm btn-danger" onclick="rejectUser(${user.ID})">Reject</button>` : 
+                                ''}
+                            <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.ID})">Delete</button>
+                        </td>
+                    </tr>
+                `).join('') || '<tr><td colspan="9" class="text-center">No users found</td></tr>';
+            } catch (error) {
+                showMessage('usersMessage', 'Error loading users: ' + error.message, 'danger');
+            }
+        }
+
+        document.getElementById('userForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            console.log('=== USER FORM SUBMIT TRIGGERED ===');
+            console.log('Event:', e);
+            
+            const password = document.getElementById('userPassword').value;
+            const confirmPassword = document.getElementById('userConfirmPassword').value;
+            
+            if (password !== confirmPassword) {
+                showMessage('usersMessage', 'Passwords do not match', 'danger');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showMessage('usersMessage', 'Password must be at least 6 characters', 'danger');
+                return;
+            }
+            
+            const projectID = document.getElementById('userProject').value;
+            const roleValue = document.getElementById('userRole').value;
+            
+            if (!roleValue) {
+                showMessage('usersMessage', 'Please select a role', 'danger');
+                return;
+            }
+            
+            console.log('Form field values:');
+            console.log('EmpNo:', document.getElementById('userEmpNo').value);
+            console.log('Name:', document.getElementById('userName').value);
+            console.log('Email:', document.getElementById('userEmail').value);
+            console.log('Phone:', document.getElementById('userPhone').value);
+            console.log('Password:', password);
+            console.log('Role:', roleValue);
+            console.log('ProjectID:', projectID);
+            
+            const user = {
+                EmpNo: document.getElementById('userEmpNo').value,
+                Name: document.getElementById('userName').value,
+                Email: document.getElementById('userEmail').value,
+                PhoneNo: document.getElementById('userPhone').value,
+                Password: password,
+                Role: roleValue
+            };
+            
+            if (projectID) {
+                user.ProjectID = parseInt(projectID);
+            }
+            
+            console.log('Final user object:', user);
+
+            const submitBtn = document.querySelector('#userForm button[type="submit"]');
+            const isEditMode = submitBtn.dataset.mode === 'edit';
+            const editId = submitBtn.dataset.editId;
+
+            try {
+                let data;
+                if (isEditMode) {
+                    console.log('Making API call to update user');
+                    data = await apiCall(`/users/${editId}`, 'PUT', user);
+                    console.log('API response:', data);
+                    showMessage('usersMessage', 'User updated successfully', 'success');
+                } else {
+                    console.log('Making API call to create user');
+                    data = await apiCall('/users', 'POST', user);
+                    console.log('API response:', data);
+                    showMessage('usersMessage', 'User created successfully', 'success');
+                }
+                resetUserForm();
+                loadUsers();
+            } catch (error) {
+                console.error('Error saving user:', error);
+                showMessage('usersMessage', 'Error: ' + error.message, 'danger');
+            }
+        });
+
+        function resetUserForm() {
+            document.getElementById('userForm').reset();
+            // Ensure role has a default value
+            document.getElementById('userRole').value = 'USER';
+            
+            // Reset edit mode
+            const submitBtn = document.querySelector('#userForm button[type="submit"]');
+            submitBtn.textContent = 'Save User';
+            delete submitBtn.dataset.editId;
+            delete submitBtn.dataset.mode;
+        }
+
+        function testUserForm() {
+            console.log('Test button clicked');
+            const userName = document.getElementById('userName').value;
+            const userEmail = document.getElementById('userEmail').value;
+            console.log('Form values - Name:', userName, 'Email:', userEmail);
+            alert('Test: Name=' + userName + ', Email=' + userEmail);
+        }
+
+        async function deleteUser(id) {
+            if (!confirm('Delete this user?')) return;
+            try {
+                await apiCall(`/users/${id}`, 'DELETE');
+                showMessage('usersMessage', 'User deleted', 'success');
+                loadUsers();
+            } catch (error) {
+                showMessage('usersMessage', 'Error: ' + error.message, 'danger');
+            }
+        }
+
+        function editUser(id) {
+            // Find user and populate form
+            const user = users.find(u => u.ID == id);
+            if (!user) return;
+
+            document.getElementById('userEmpNo').value = user.EmpNo || '';
+            document.getElementById('userName').value = user.Name || '';
+            document.getElementById('userEmail').value = user.Email || '';
+            document.getElementById('userPhone').value = user.PhoneNo || '';
+            document.getElementById('userProject').value = user.ProjectID || '';
+            document.getElementById('userRole').value = user.Role || 'USER';
+
+            // Change button text and store edit mode
+            const submitBtn = document.querySelector('#userForm button[type="submit"]');
+            submitBtn.textContent = 'Update User';
+            submitBtn.dataset.editId = id;
+            submitBtn.dataset.mode = 'edit';
+
+            // Scroll to form
+            document.getElementById('users').scrollIntoView();
+        }
+
+        async function approveUser(id) {
+            if (!confirm('Approve this user?')) return;
+            try {
+                await apiCall(`/users/${id}/approve`, 'PATCH');
+                showMessage('usersMessage', 'User approved successfully', 'success');
+                loadUsers();
+            } catch (error) {
+                showMessage('usersMessage', 'Error approving user: ' + error.message, 'danger');
+            }
+        }
+
+        async function rejectUser(id) {
+            if (!confirm('Reject this user?')) return;
+            try {
+                await apiCall(`/users/${id}/reject`, 'PATCH');
+                showMessage('usersMessage', 'User rejected', 'success');
+                loadUsers();
+            } catch (error) {
+                showMessage('usersMessage', 'Error rejecting user: ' + error.message, 'danger');
+            }
+        }
+
+        let projects = []; // Global variable to store projects data
+
+        // PROJECTS
+        async function loadProjects() {
+            try {
+                const data = await apiCall('/projects');
+                projects = data.data || []; // Store projects globally
+                const tbody = document.getElementById('projectsTable');
+                tbody.innerHTML = projects.map(project => `
+                    <tr>
+                        <td>${project.ID}</td>
+                        <td>${project.Name}</td>
+                        <td>${project.Address || '-'}</td>
+                        <td>${new Date(project.CreatedAt).toLocaleDateString()}</td>
+                        <td>
+                            <button class="btn btn-sm btn-warning" onclick="editProject(${project.ID})">Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteProject(${project.ID})">Delete</button>
+                        </td>
+                    </tr>
+                `).join('') || '<tr><td colspan="5" class="text-center">No projects found</td></tr>';
+            } catch (error) {
+                showMessage('projectsMessage', 'Error loading projects: ' + error.message, 'danger');
+            }
+        }
+
+        async function loadProjectsForSelect(selectId) {
+            try {
+                const data = await apiCall('/projects');
+                const projects = data.data || [];
+                const select = document.getElementById(selectId);
+                select.innerHTML = projects.map(p => `<option value="${p.ID}">${p.Name}</option>`).join('');
+            } catch (error) {
+                console.error('Error loading projects:', error);
+            }
+        }
+
+        document.getElementById('projectForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const project = {
+                Name: document.getElementById('projectName').value,
+                Address: document.getElementById('projectAddress').value
+            };
+
+            const submitBtn = document.querySelector('#projectForm button[type="submit"]');
+            const isEditMode = submitBtn.dataset.mode === 'edit';
+            const editId = submitBtn.dataset.editId;
+
+            try {
+                let data;
+                if (isEditMode) {
+                    data = await apiCall(`/projects/${editId}`, 'PUT', project);
+                    showMessage('projectsMessage', 'Project updated successfully', 'success');
+                } else {
+                    data = await apiCall('/projects', 'POST', project);
+                    showMessage('projectsMessage', 'Project created successfully', 'success');
+                }
+                resetProjectForm();
+                loadProjects();
+                loadProjectsForSelect('productProject');
+            } catch (error) {
+                showMessage('projectsMessage', 'Error: ' + error.message, 'danger');
+            }
+        });
+
+        function resetProjectForm() {
+            document.getElementById('projectForm').reset();
+            
+            // Reset edit mode
+            const submitBtn = document.querySelector('#projectForm button[type="submit"]');
+            submitBtn.textContent = 'Save Project';
+            delete submitBtn.dataset.editId;
+            delete submitBtn.dataset.mode;
+        }
+
+        async function deleteProject(id) {
+            if (!confirm('Delete this project?')) return;
+            try {
+                await apiCall(`/projects/${id}`, 'DELETE');
+                showMessage('projectsMessage', 'Project deleted', 'success');
+                loadProjects();
+                loadProjectsForSelect('productProject');
+            } catch (error) {
+                showMessage('projectsMessage', 'Error: ' + error.message, 'danger');
+            }
+        }
+
+        function editProject(id) {
+            // Find project and populate form
+            const project = projects.find(p => p.ID == id);
+            if (!project) return;
+
+            document.getElementById('projectName').value = project.Name || '';
+            document.getElementById('projectAddress').value = project.Address || '';
+
+            // Change button text and store edit mode
+            const submitBtn = document.querySelector('#projectForm button[type="submit"]');
+            submitBtn.textContent = 'Update Project';
+            submitBtn.dataset.editId = id;
+            submitBtn.dataset.mode = 'edit';
+
+            // Scroll to form
+            document.getElementById('projects').scrollIntoView();
+        }
+
+        let products = []; // Global variable to store products data
+
+        // PRODUCTS
+        async function loadProducts() {
+            try {
+                const data = await apiCall('/products');
+                products = data.data || []; // Store products globally
+                const tbody = document.getElementById('productsTable');
+                tbody.innerHTML = products.map(product => `
+                    <tr>
+                        <td>${product.ID}</td>
+                        <td>${product.Name}</td>
+                        <td>${product.Project?.Name || '-'}</td>
+                        <td>${product.Description?.substring(0, 50) || '-'}</td>
+                        <td>
+                            <button class="btn btn-sm btn-warning" onclick="editProduct(${product.ID})">Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteProduct(${product.ID})">Delete</button>
+                        </td>
+                    </tr>
+                `).join('') || '<tr><td colspan="5" class="text-center">No products found</td></tr>';
+            } catch (error) {
+                showMessage('productsMessage', 'Error loading products: ' + error.message, 'danger');
+            }
+        }
+
+        async function loadProductsForSelect(selectId) {
+            try {
+                const data = await apiCall('/products');
+                const products = data.data || [];
+                const select = document.getElementById(selectId);
+                select.innerHTML = products.map(p => `<option value="${p.ID}">${p.Name}</option>`).join('');
+            } catch (error) {
+                console.error('Error loading products:', error);
+            }
+        }
+
+        document.getElementById('productForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            console.log('Product form submitted');
+            const product = {
+                Name: document.getElementById('productName').value,
+                Description: document.getElementById('productDescription').value,
+                ProjectID: parseInt(document.getElementById('productProject').value)
+            };
+            console.log('Product data:', product);
+
+            const submitBtn = document.querySelector('#productForm button[type="submit"]');
+            const isEditMode = submitBtn.dataset.mode === 'edit';
+            const editId = submitBtn.dataset.editId;
+
+            try {
+                let data;
+                if (isEditMode) {
+                    console.log('Making API call to update product');
+                    data = await apiCall(`/products/${editId}`, 'PUT', product);
+                    console.log('Product updated successfully');
+                    showMessage('productsMessage', 'Product updated successfully', 'success');
+                } else {
+                    console.log('Making API call to create product');
+                    data = await apiCall('/products', 'POST', product);
+                    console.log('Product created successfully');
+                    showMessage('productsMessage', 'Product created successfully', 'success');
+                }
+                resetProductForm();
+                loadProducts();
+                loadProductsForSelect('postProduct');
+            } catch (error) {
+                console.error('Error saving product:', error);
+                showMessage('productsMessage', 'Error: ' + error.message, 'danger');
+            }
+        });
+
+        function resetProductForm() {
+            document.getElementById('productForm').reset();
+            
+            // Reset edit mode
+            const submitBtn = document.querySelector('#productForm button[type="submit"]');
+            submitBtn.textContent = 'Save Product';
+            delete submitBtn.dataset.editId;
+            delete submitBtn.dataset.mode;
+        }
+
+        function testProductForm() {
+            console.log('Test product button clicked');
+            const productName = document.getElementById('productName').value;
+            const productDescription = document.getElementById('productDescription').value;
+            console.log('Form values - Name:', productName, 'Description:', productDescription);
+            alert('Test: Name=' + productName + ', Description=' + productDescription);
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm('Delete this product?')) return;
+            try {
+                await apiCall(`/products/${id}`, 'DELETE');
+                showMessage('productsMessage', 'Product deleted', 'success');
+                loadProducts();
+                loadProductsForSelect('postProduct');
+            } catch (error) {
+                showMessage('productsMessage', 'Error: ' + error.message, 'danger');
+            }
+        }
+
+        function editProduct(id) {
+            // Find product and populate form
+            const product = products.find(p => p.ID == id);
+            if (!product) return;
+
+            document.getElementById('productName').value = product.Name || '';
+            document.getElementById('productDescription').value = product.Description || '';
+            document.getElementById('productProject').value = product.ProjectID || '';
+
+            // Change button text and store edit mode
+            const submitBtn = document.querySelector('#productForm button[type="submit"]');
+            submitBtn.textContent = 'Update Product';
+            submitBtn.dataset.editId = id;
+            submitBtn.dataset.mode = 'edit';
+
+            // Scroll to form
+            document.getElementById('products').scrollIntoView();
+        }
+
+        // POSTS
+        let allPosts = []; // Global variable to store posts data
+
+        async function loadPosts() {
+            try {
+                const data = await apiCall('/posts');
+                const posts = data.data || [];
+                allPosts = posts; // Store posts globally
+                const tbody = document.getElementById('postsTable');
+                tbody.innerHTML = posts.map(post => `
+                    <tr>
+                        <td>${post.ID}</td>
+                        <td>${post.Product?.Name || '-'}</td>
+                        <td>$${post.Price?.toFixed(2) || '0.00'}</td>
+                        <td>${post.TotalQty || 0}</td>
+                        <td>${post.RemainingQty !== undefined ? post.RemainingQty : (post.TotalQty || 0)}</td>
+                        <td>${post.TotalOrders || 0}</td>
+                        <td>
+                            ${post.ProductImg ? 
+                                `<button class="btn btn-sm btn-info" onclick="previewImage('${post.ProductImg}')">👁️ Preview</button>
+                                 <button class="btn btn-sm btn-secondary" onclick="downloadImage('${post.ProductImg}')">⬇️ Download</button>` : 
+                                'No image'}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-warning" onclick="editPost(${post.ID})">Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deletePost(${post.ID})">Delete</button>
+                        </td>
+                    </tr>
+                `).join('') || '<tr><td colspan="8" class="text-center">No posts found</td></tr>';
+            } catch (error) {
+                showMessage('postsMessage', 'Error loading posts: ' + error.message, 'danger');
+            }
+        }
+
+        async function loadPostsForSelect(selectId) {
+            try {
+                const data = await apiCall('/posts');
+                const posts = data.data || [];
+                allPosts = posts; // Store posts globally
+                const select = document.getElementById(selectId);
+                select.innerHTML = posts.map(p => `<option value="${p.ID}">${p.Product?.Name || 'Post ' + p.ID} - $${p.Price?.toFixed(2) || '0.00'}</option>`).join('');
+            } catch (error) {
+                console.error('Error loading posts:', error);
+            }
+        }
+
+        document.getElementById('postForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            console.log('Post form submitted');
+            console.log('Current user:', currentUser);
+            console.log('Auth token exists:', !!authToken);
+            
+            const formData = new FormData();
+            formData.append('ProductID', parseInt(document.getElementById('postProduct').value));
+            formData.append('Price', parseFloat(document.getElementById('postPrice').value));
+            formData.append('TotalQty', parseInt(document.getElementById('postTotalQty').value));
+            
+            const imageFile = document.getElementById('postImage').files[0];
+            if (imageFile) {
+                formData.append('ProductImg', imageFile);
+            }
+            
+            console.log('FormData contents:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`${key}:`, value);
+            }
+
+            const submitBtn = document.querySelector('#postForm button[type="submit"]');
+            const isEditMode = submitBtn.dataset.mode === 'edit';
+            const editId = submitBtn.dataset.editId;
+
+            try {
+                let data;
+                if (isEditMode) {
+                    console.log('Making API call to update post');
+                    // For edit, use regular JSON since we don't handle file changes
+                    const postData = {
+                        ProductID: parseInt(document.getElementById('postProduct').value),
+                        Price: parseFloat(document.getElementById('postPrice').value),
+                        TotalQty: parseInt(document.getElementById('postTotalQty').value)
+                    };
+                    data = await apiCall(`/posts/${editId}`, 'PUT', postData);
+                    console.log('Post updated successfully');
+                    showMessage('postsMessage', 'Post updated successfully', 'success');
+                } else {
+                    console.log('Making API call to create post');
+                    data = await apiCallWithFile('/posts', 'POST', formData);
+                    console.log('Post created successfully');
+                    showMessage('postsMessage', 'Post created successfully', 'success');
+                }
+                resetPostForm();
+                loadPosts();
+                loadPostsForSelect('orderPost');
+            } catch (error) {
+                console.error('Error saving post:', error);
+                showMessage('postsMessage', 'Error: ' + error.message, 'danger');
+            }
+        });
+
+        function resetPostForm() {
+            document.getElementById('postForm').reset();
+            
+            // Reset edit mode
+            const submitBtn = document.querySelector('#postForm button[type="submit"]');
+            submitBtn.textContent = 'Save Post';
+            delete submitBtn.dataset.editId;
+            delete submitBtn.dataset.mode;
+        }
+
+        function previewImage(imagePath) {
+            // Open image in new tab/window
+            window.open(`http://localhost:8080/${imagePath}`, '_blank');
+        }
+
+        function downloadImage(imagePath) {
+            // Create a temporary link to download the image
+            const link = document.createElement('a');
+            link.href = `http://localhost:8080/${imagePath}`;
+            link.download = imagePath.split('/').pop();
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function testPostForm() {
+            console.log('Test post button clicked');
+            const postProduct = document.getElementById('postProduct').value;
+            const postPrice = document.getElementById('postPrice').value;
+            console.log('Form values - Product:', postProduct, 'Price:', postPrice);
+            alert('Test: Product=' + postProduct + ', Price=' + postPrice);
+        }
+
+        async function deletePost(id) {
+            if (!confirm('Delete this post?')) return;
+            try {
+                await apiCall(`/posts/${id}`, 'DELETE');
+                showMessage('postsMessage', 'Post deleted', 'success');
+                loadPosts();
+                loadPostsForSelect('orderPost');
+            } catch (error) {
+                showMessage('postsMessage', 'Error: ' + error.message, 'danger');
+            }
+        }
+
+        function editPost(id) {
+            // Find post and populate form
+            const post = allPosts.find(p => p.ID == id);
+            if (!post) return;
+
+            document.getElementById('postProduct').value = post.ProductID || '';
+            document.getElementById('postPrice').value = post.Price || '';
+            document.getElementById('postTotalQty').value = post.TotalQty || '';
+            // Note: Image editing not implemented for simplicity
+
+            // Change button text and store edit mode
+            const submitBtn = document.querySelector('#postForm button[type="submit"]');
+            submitBtn.textContent = 'Update Post';
+            submitBtn.dataset.editId = id;
+            submitBtn.dataset.mode = 'edit';
+
+            // Scroll to form
+            document.getElementById('posts').scrollIntoView();
+        }
+
+        // INVENTORIES
+        async function loadInventories() {
+            try {
+                const data = await apiCall('/inventories');
+                const inventories = data.data || [];
+                const tbody = document.getElementById('inventoriesTable');
+                tbody.innerHTML = inventories.map(inv => `
+                    <tr>
+                        <td>${inv.ID}</td>
+                        <td>${inv.Product?.Name || '-'}</td>
+                        <td>${inv.Quantity || 0}</td>
+                        <td>${new Date(inv.UpdatedAt).toLocaleDateString()}</td>
+                        <td>
+                            <button class="btn btn-sm btn-warning" onclick="editInventory(${inv.ID})">Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteInventory(${inv.ID})">Delete</button>
+                        </td>
+                    </tr>
+                `).join('') || '<tr><td colspan="5" class="text-center">No inventories found</td></tr>';
+            } catch (error) {
+                showMessage('inventoriesMessage', 'Error loading inventories: ' + error.message, 'danger');
+            }
+        }
+
+        document.getElementById('inventoryForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const inventory = {
+                ProductID: document.getElementById('inventoryProduct').value,
+                Quantity: parseInt(document.getElementById('inventoryQuantity').value)
+            };
+
+            try {
+                await apiCall('/inventories', 'POST', inventory);
+                showMessage('inventoriesMessage', 'Inventory created successfully', 'success');
+                resetInventoryForm();
+                loadInventories();
+            } catch (error) {
+                showMessage('inventoriesMessage', 'Error: ' + error.message, 'danger');
+            }
+        });
+
+        function resetInventoryForm() {
+            document.getElementById('inventoryForm').reset();
+        }
+
+        async function deleteInventory(id) {
+            if (!confirm('Delete this inventory?')) return;
+            try {
+                await apiCall(`/inventories/${id}`, 'DELETE');
+                showMessage('inventoriesMessage', 'Inventory deleted', 'success');
+                loadInventories();
+            } catch (error) {
+                showMessage('inventoriesMessage', 'Error: ' + error.message, 'danger');
+            }
+        }
+
+        function editInventory(id) {
+            alert('Edit functionality can be implemented');
+        }
+
+        let orders = []; // Global variable to store orders data
+
+        // ORDERS
+        async function loadOrders() {
+            try {
+                const data = await apiCall('/orders');
+                orders = data.data || []; // Store orders globally
+                const tbody = document.getElementById('ordersTable');
+                tbody.innerHTML = orders.map(order => `
+                    <tr>
+                        <td>${order.ID}</td>
+                        <td>${order.Post?.Product?.Name || '-'}</td>
+                        <td>${order.User?.Name || '-'}</td>
+                        <td>${order.OrderQuantity || 0}</td>
+                        <td>$${order.TotalPrice?.toFixed(2) || '0.00'}</td>
+                        <td><span class="badge badge-custom bg-secondary">${order.OrderStatus || 'PENDING'}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-warning" onclick="editOrder(${order.ID})">Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteOrder(${order.ID})">Delete</button>
+                        </td>
+                    </tr>
+                `).join('') || '<tr><td colspan="7" class="text-center">No orders found</td></tr>';
+            } catch (error) {
+                showMessage('ordersMessage', 'Error loading orders: ' + error.message, 'danger');
+            }
+        }
+
+        // LOGS
+        async function loadLogs() {
+            try {
+                const data = await apiCall('/logs');
+                const logs = data.data || [];
+                const tbody = document.getElementById('logsTable');
+                tbody.innerHTML = logs.map(log => `
+                    <tr>
+                        <td>${log.ID}</td>
+                        <td><span class="badge badge-custom bg-primary">${log.Action}</span></td>
+                        <td><span class="badge badge-custom bg-info">${log.EntityType}</span></td>
+                        <td>${log.EntityID}</td>
+                        <td>${log.UserID}</td>
+                        <td>${log.Details || '-'}</td>
+                        <td>${new Date(log.Timestamp).toLocaleString()}</td>
+                    </tr>
+                `).join('') || '<tr><td colspan="7" class="text-center">No logs found</td></tr>';
+            } catch (error) {
+                showMessage('logsMessage', 'Error loading logs: ' + error.message, 'danger');
+            }
+        }
+
+        async function loadUsersForSelect(selectId) {
+            try {
+                const data = await apiCall('/users');
+                const users = data.data || [];
+                const select = document.getElementById(selectId);
+                select.innerHTML = users.map(u => `<option value="${u.ID}">${u.Name}</option>`).join('');
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        document.getElementById('orderForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const postId = parseInt(document.getElementById('orderPost').value);
+            const quantity = parseInt(document.getElementById('orderQuantity').value);
+            
+            // Validate quantity against available stock (remaining quantity)
+            const selectedPost = allPosts.find(p => p.ID == postId);
+            const availableQty = selectedPost ? (selectedPost.RemainingQty !== undefined ? selectedPost.RemainingQty : selectedPost.TotalQty) : 0;
+            if (selectedPost && quantity > availableQty) {
+                showMessage('ordersMessage', `Cannot order ${quantity} items. Only ${availableQty} available.`, 'danger');
+                return;
+            }
+            
+            const order = {
+                PostID: postId,
+                UserID: parseInt(document.getElementById('orderUser').value),
+                OrderQuantity: quantity,
+                TotalPrice: parseFloat(document.getElementById('orderTotalPrice').value),
+                OrderStatus: document.getElementById('orderStatus').value
+            };
+
+            const submitBtn = document.querySelector('#orderForm button[type="submit"]');
+            const isEditMode = submitBtn.dataset.mode === 'edit';
+            const editId = submitBtn.dataset.editId;
+
+            try {
+                let data;
+                if (isEditMode) {
+                    data = await apiCall(`/orders/${editId}`, 'PUT', order);
+                    showMessage('ordersMessage', 'Order updated successfully', 'success');
+                } else {
+                    data = await apiCall('/orders', 'POST', order);
+                    showMessage('ordersMessage', 'Order created successfully', 'success');
+                }
+                resetOrderForm();
+                loadOrders();
+            } catch (error) {
+                showMessage('ordersMessage', 'Error: ' + error.message, 'danger');
+            }
+        });
+
+        function resetOrderForm() {
+            document.getElementById('orderForm').reset();
+            document.getElementById('orderTotalPrice').value = '';
+            
+            // Reset edit mode
+            const submitBtn = document.querySelector('#orderForm button[type="submit"]');
+            submitBtn.textContent = 'Save Order';
+            delete submitBtn.dataset.editId;
+            delete submitBtn.dataset.mode;
+        }
+
+        // Auto-calculate total price when post or quantity changes
+        function calculateOrderTotal() {
+            const postId = document.getElementById('orderPost').value;
+            const quantityInput = document.getElementById('orderQuantity');
+            const quantity = parseInt(quantityInput.value) || 0;
+            
+            if (postId && quantity > 0) {
+                const selectedPost = allPosts.find(p => p.ID == postId);
+                if (selectedPost) {
+                    // Use remaining quantity instead of total quantity
+                    const availableQty = selectedPost.RemainingQty !== undefined ? selectedPost.RemainingQty : selectedPost.TotalQty;
+                    
+                    // Set max quantity and show available
+                    quantityInput.max = availableQty;
+                    document.getElementById('quantityHelp').textContent = `Available: ${availableQty}`;
+                    
+                    // Validate quantity doesn't exceed available
+                    if (quantity > availableQty) {
+                        quantityInput.value = availableQty;
+                        showMessage('ordersMessage', `Quantity cannot exceed available stock (${availableQty})`, 'warning');
+                        return;
+                    }
+                    
+                    const totalPrice = quantity * selectedPost.Price;
+                    document.getElementById('orderTotalPrice').value = totalPrice.toFixed(2);
+                }
+            } else if (postId) {
+                const selectedPost = allPosts.find(p => p.ID == postId);
+                if (selectedPost) {
+                    const availableQty = selectedPost.RemainingQty !== undefined ? selectedPost.RemainingQty : selectedPost.TotalQty;
+                    quantityInput.max = availableQty;
+                    document.getElementById('quantityHelp').textContent = `Available: ${availableQty}`;
+                }
+                document.getElementById('orderTotalPrice').value = '';
+            } else {
+                quantityInput.max = '';
+                document.getElementById('quantityHelp').textContent = 'Available: Select a post first';
+                document.getElementById('orderTotalPrice').value = '';
+            }
+        }
+
+        // Add event listeners for auto-calculation
+        document.getElementById('orderPost').addEventListener('change', calculateOrderTotal);
+        document.getElementById('orderQuantity').addEventListener('input', calculateOrderTotal);
+
+        async function deleteOrder(id) {
+            if (!confirm('Delete this order?')) return;
+            try {
+                await apiCall(`/orders/${id}`, 'DELETE');
+                showMessage('ordersMessage', 'Order deleted', 'success');
+                loadOrders();
+            } catch (error) {
+                showMessage('ordersMessage', 'Error: ' + error.message, 'danger');
+            }
+        }
+
+        function editOrder(id) {
+            // Find order and populate form
+            const order = orders.find(o => o.ID == id);
+            if (!order) return;
+
+            document.getElementById('orderPost').value = order.PostID || '';
+            document.getElementById('orderUser').value = order.UserID || '';
+            document.getElementById('orderQuantity').value = order.OrderQuantity || '';
+            document.getElementById('orderStatus').value = order.OrderStatus || 'PENDING';
+            
+            // Calculate total price
+            calculateOrderTotal();
+
+            // Change button text and store edit mode
+            const submitBtn = document.querySelector('#orderForm button[type="submit"]');
+            submitBtn.textContent = 'Update Order';
+            submitBtn.dataset.editId = id;
+            submitBtn.dataset.mode = 'edit';
+
+            // Scroll to form
+            document.getElementById('orders').scrollIntoView();
+        }
+    </script>
+</body>
+</html>

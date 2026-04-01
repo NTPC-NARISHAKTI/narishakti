@@ -3,9 +3,17 @@ package services
 import (
 	"marketplace/internal/models"
 	"marketplace/internal/repositories"
+	"marketplace/internal/utils"
 )
 
 func CreateUser(User *models.User) error {
+	// Hash the password
+	hashed, err := utils.HashPassword(User.PasswordHash)
+	if err != nil {
+		return err
+	}
+	User.PasswordHash = hashed
+
 	return repositories.CreateUser(User)
 }
 
@@ -25,20 +33,36 @@ func DeleteUser(User *models.User) error {
 	return repositories.DeleteUser(User)
 }
 
-func ApproveUser(id string) error {
+func ApproveUser(id string, approvedBy uint) error {
 	user, err := repositories.GetUserByID(id)
 	if err != nil {
 		return err
 	}
 	user.ApprovalStatus = "APPROVED"
-	return repositories.UpdateUser(&user)
+	err = repositories.UpdateUser(&user)
+	if err != nil {
+		return err
+	}
+
+	// Log the user approval
+	LogActivity("APPROVED", "USER", user.ID, approvedBy, "User account was approved")
+
+	return nil
 }
 
-func RejectUser(id string) error {
+func RejectUser(id string, rejectedBy uint) error {
 	user, err := repositories.GetUserByID(id)
 	if err != nil {
 		return err
 	}
 	user.ApprovalStatus = "REJECTED"
-	return repositories.UpdateUser(&user)
+	err = repositories.UpdateUser(&user)
+	if err != nil {
+		return err
+	}
+
+	// Log the user rejection
+	LogActivity("REJECTED", "USER", user.ID, rejectedBy, "User account was rejected")
+
+	return nil
 }

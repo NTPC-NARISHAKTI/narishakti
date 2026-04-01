@@ -1,12 +1,46 @@
 package services
 
 import (
+	"errors"
+	"marketplace/internal/database"
 	"marketplace/internal/models"
 	"marketplace/internal/repositories"
+
+	"gorm.io/gorm"
 )
 
 func CreateOrder(order *models.Order) error {
-	return repositories.CreateOrder(order)
+	// Validate order quantity against remaining quantity (TotalQty - confirmed orders)
+	var post models.Post
+	if err := database.DB.First(&post, order.PostID).Error; err != nil {
+		return errors.New("post not found")
+	}
+
+	// Calculate remaining quantity
+	var confirmedOrdersQty int64
+	database.DB.Model(&models.Order{}).
+		Where("post_id = ? AND order_status = ?", order.PostID, "CONFIRMED").
+		Select("COALESCE(SUM(order_quantity), 0)").
+		Scan(&confirmedOrdersQty)
+
+	remainingQty := post.TotalQty - int(confirmedOrdersQty)
+	if remainingQty < 0 {
+		remainingQty = 0
+	}
+
+	if order.OrderQuantity > remainingQty {
+		return errors.New("order quantity exceeds available remaining quantity in post")
+	}
+
+	err := repositories.CreateOrder(order)
+	if err != nil {
+		return err
+	}
+
+	// Log the order creation
+	LogActivity("CREATED", "ORDER", order.ID, order.UserID, "User created an order")
+
+	return nil
 }
 
 func GetOrders() ([]models.Order, error) {
@@ -18,7 +52,76 @@ func GetOrder(id string) (models.Order, error) {
 }
 
 func UpdateOrder(order *models.Order) error {
-	return repositories.UpdateOrder(order)
+	// Get the existing order to check status change
+	var existingOrder models.Order
+	if err := database.DB.First(&existingOrder, order.ID).Error; err != nil {
+		return err
+	}
+
+	// Validate order quantity against remaining quantity (TotalQty - confirmed orders excluding this order)
+	var post models.Post
+	if err := database.DB.First(&post, order.PostID).Error; err != nil {
+		return errors.New("post not found")
+	}
+
+	// Calculate remaining quantity excluding this order's quantity if it's confirmed
+	var confirmedOrdersQty int64
+	query := database.DB.Model(&models.Order{}).
+		Where("post_id = ? AND order_status = ? AND id != ?", order.PostID, "CONFIRMED", order.ID).
+		Select("COALESCE(SUM(order_quantity), 0)")
+	query.Scan(&confirmedOrdersQty)
+
+	remainingQty := post.TotalQty - int(confirmedOrdersQty)
+	if remainingQty < 0 {
+		remainingQty = 0
+	}
+
+	if order.OrderQuantity > remainingQty {
+		return errors.New("order quantity exceeds available remaining quantity in post")
+	}
+
+	// Check if status is being changed to CONFIRMED
+	if existingOrder.OrderStatus != "CONFIRMED" && order.OrderStatus == "CONFIRMED" {
+		// Reduce inventory
+		if err := reduceInventory(order.PostID, order.OrderQuantity); err != nil {
+			return err
+		}
+		// Log the order confirmation
+		LogActivity("CONFIRMED", "ORDER", order.ID, order.UserID, "Order was confirmed and inventory was reduced")
+	}
+
+	err := repositories.UpdateOrder(order)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func reduceInventory(postID uint, quantity int) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		// Find the post to get the product ID
+		var post models.Post
+		if err := tx.First(&post, postID).Error; err != nil {
+			return err
+		}
+
+		// Reduce inventory quantity
+		result := tx.Model(&models.Inventory{}).
+			Where("product_id = ?", post.ProductID).
+			Update("quantity", gorm.Expr("quantity - ?", quantity))
+
+		if result.Error != nil {
+			return result.Error
+		}
+
+		// Check if update affected any rows
+		if result.RowsAffected == 0 {
+			return errors.New("inventory not found for product")
+		}
+
+		return nil
+	})
 }
 
 func DeleteOrder(order *models.Order) error {

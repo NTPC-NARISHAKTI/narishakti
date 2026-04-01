@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 
 	"marketplace/internal/utils"
 
@@ -24,8 +25,11 @@ func RoleMiddleware(requiredRoles ...string) gin.HandlerFunc {
 			return
 		}
 
+		// Convert to uppercase for case-insensitive comparison
+		userRoleUpper := strings.ToUpper(userRole)
+
 		for _, requiredRole := range requiredRoles {
-			if userRole == requiredRole {
+			if userRoleUpper == strings.ToUpper(requiredRole) {
 				c.Next()
 				return
 			}

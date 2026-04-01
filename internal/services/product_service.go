@@ -5,8 +5,16 @@ import (
 	"marketplace/internal/repositories"
 )
 
-func CreateProduct(product *models.Product) error {
-	return repositories.CreateProduct(product)
+func CreateProduct(product *models.Product, createdBy uint) error {
+	err := repositories.CreateProduct(product)
+	if err != nil {
+		return err
+	}
+
+	// Log the product creation
+	LogActivity("CREATED", "PRODUCT", product.ID, createdBy, "Product was created")
+
+	return nil
 }
 
 func GetProducts() ([]models.Product, error) {
