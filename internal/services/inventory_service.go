@@ -5,8 +5,16 @@ import (
 	"marketplace/internal/repositories"
 )
 
-func CreateInventory(inventory *models.Inventory) error {
-	return repositories.CreateInventory(inventory)
+func CreateInventory(inventory *models.Inventory, createdBy uint) error {
+	err := repositories.CreateInventory(inventory)
+	if err != nil {
+		return err
+	}
+
+	// Log the inventory creation
+	LogActivity("CREATED", "INVENTORY", inventory.ID, createdBy, "Inventory was created")
+
+	return nil
 }
 
 func GetInventories() ([]models.Inventory, error) {
@@ -17,8 +25,16 @@ func GetInventory(id string) (models.Inventory, error) {
 	return repositories.GetInventoryByID(id)
 }
 
-func UpdateInventory(inventory *models.Inventory) error {
-	return repositories.UpdateInventory(inventory)
+func UpdateInventory(inventory *models.Inventory, updatedBy uint) error {
+	err := repositories.UpdateInventory(inventory)
+	if err != nil {
+		return err
+	}
+
+	// Log the inventory update
+	LogActivity("UPDATED", "INVENTORY", inventory.ID, updatedBy, "Inventory quantity was updated")
+
+	return nil
 }
 
 func DeleteInventory(inventory *models.Inventory) error {

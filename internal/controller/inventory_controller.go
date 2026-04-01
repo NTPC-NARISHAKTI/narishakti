@@ -18,7 +18,14 @@ func CreateInventory(c *gin.Context) {
 		return
 	}
 
-	err := services.CreateInventory(&inventory)
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "User not found in context"))
+		return
+	}
+	createdBy := uint(userID.(float64))
+
+	err := services.CreateInventory(&inventory, createdBy)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to create inventory", err.Error()))
 		return
@@ -63,7 +70,14 @@ func UpdateInventory(c *gin.Context) {
 		return
 	}
 
-	err = services.UpdateInventory(&inventory)
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "User not found in context"))
+		return
+	}
+	updatedBy := uint(userID.(float64))
+
+	err = services.UpdateInventory(&inventory, updatedBy)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to update inventory", err.Error()))
 		return
