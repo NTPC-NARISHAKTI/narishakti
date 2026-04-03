@@ -37,6 +37,12 @@ func UpdateInventory(inventory *models.Inventory, updatedBy uint) error {
 	return nil
 }
 
-func DeleteInventory(inventory *models.Inventory) error {
-	return repositories.DeleteInventory(inventory)
+func DeleteInventory(inventory *models.Inventory, deletedBy uint) error {
+	err := repositories.DeleteInventory(inventory)
+	if err != nil {
+		return err
+	}
+
+	LogActivity("DELETED", "INVENTORY", inventory.ID, deletedBy, "Inventory was deleted")
+	return nil
 }

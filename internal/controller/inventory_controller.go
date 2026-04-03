@@ -95,7 +95,14 @@ func DeleteInventory(c *gin.Context) {
 		return
 	}
 
-	err = services.DeleteInventory(&inventory)
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "User not found in context"))
+		return
+	}
+	deletedBy := uint(userID.(float64))
+
+	err = services.DeleteInventory(&inventory, deletedBy)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to delete inventory", err.Error()))
 		return

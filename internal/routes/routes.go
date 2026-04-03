@@ -14,7 +14,7 @@ func SetupRoutes(r *gin.Engine) {
 	// Routes Private
 	// Project routes
 	r.POST("/projects", controllers.CreateProject)
-	auth.GET("/projects", controllers.GetProjects)
+	r.GET("/projects", controllers.GetProjects) // public for registration dropdown
 	auth.GET("/projects/:id", controllers.GetProject)
 	auth.PUT("/projects/:id", controllers.UpdateProject)
 	auth.DELETE("/projects/:id", controllers.DeleteProject)
@@ -36,8 +36,8 @@ func SetupRoutes(r *gin.Engine) {
 	// Admin user routes
 	admin := auth.Group("/admin")
 	admin.Use(middleware.RoleMiddleware("ADMIN"))
-	r.PATCH("/users/:id/approve", controllers.ApproveUser)
-	r.PATCH("/users/:id/reject", controllers.RejectUser)
+	admin.PATCH("/users/:id/approve", controllers.ApproveUser)
+	admin.PATCH("/users/:id/reject", controllers.RejectUser)
 
 	// Inventory routes
 	auth.POST("/inventories", controllers.CreateInventory)

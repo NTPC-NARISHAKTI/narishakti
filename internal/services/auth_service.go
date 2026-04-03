@@ -8,7 +8,21 @@ import (
 	"strings"
 )
 
-func RegisterUser(user *models.User) (*models.User, error) {
+func RegisterUser(user *models.User, confirmPassword string) (*models.User, error) {
+	if user.PasswordHash != confirmPassword {
+		return nil, errors.New("password and confirm password do not match")
+	}
+
+	// Check duplicate email
+	if _, err := repositories.GetUserByEmail(user.Email); err == nil {
+		return nil, errors.New("email already exists")
+	}
+
+	// Check duplicate EmpNo
+	if _, err := repositories.GetUserByEmpNo(user.EmpNo); err == nil {
+		return nil, errors.New("emp id already exists")
+	}
+
 	hashed, err := utils.HashPassword(user.PasswordHash)
 	if err != nil {
 		return nil, err
@@ -20,6 +34,8 @@ func RegisterUser(user *models.User) (*models.User, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	LogActivity("CREATED", "USER", user.ID, user.ID, "User registered")
 
 	return user, nil
 }

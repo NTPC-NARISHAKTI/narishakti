@@ -235,12 +235,26 @@
                             <input type="text" class="form-control" id="registerName" required>
                         </div>
                         <div class="mb-3">
+                            <label class="form-label">Employee ID</label>
+                            <input type="text" class="form-control" id="registerEmpNo" required>
+                        </div>
+                        <div class="mb-3">
                             <label class="form-label">Email</label>
                             <input type="email" class="form-control" id="registerEmail" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Password</label>
                             <input type="password" class="form-control" id="registerPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" id="registerConfirmPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Project</label>
+                            <select class="form-control" id="registerProject" required>
+                                <option value="">Select a project</option>
+                            </select>
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Register</button>
                     </form>
@@ -762,14 +776,29 @@
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const name = document.getElementById('registerName').value;
+            const empNo = document.getElementById('registerEmpNo').value;
             const email = document.getElementById('registerEmail').value;
             const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('registerConfirmPassword').value;
+            const projectId = document.getElementById('registerProject').value;
+
+            if (password !== confirmPassword) {
+                showMessage('authMessage', 'Password and confirm password do not match.', 'danger');
+                return;
+            }
+
+            if (!projectId) {
+                showMessage('authMessage', 'Please select a project.', 'danger');
+                return;
+            }
+
+            const registerData = { name, empNo, email, password, confirmPassword, projectId: parseInt(projectId) };
 
             try {
                 const response = await fetch(`${API_URL}/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, email, password })
+                    body: JSON.stringify(registerData)
                 });
 
                 const data = await response.json();
@@ -800,6 +829,8 @@
         function showAuth() {
             document.getElementById('authContainer').style.display = 'flex';
             document.getElementById('dashboard').style.display = 'none';
+            // Load projects for register dropdown
+            loadProjectsForSelect('registerProject');
         }
 
         function showDashboard() {
@@ -1094,7 +1125,7 @@
         async function approveUser(id) {
             if (!confirm('Approve this user?')) return;
             try {
-                await apiCall(`/users/${id}/approve`, 'PATCH');
+                await apiCall(`/admin/users/${id}/approve`, 'PATCH');
                 showMessage('usersMessage', 'User approved successfully', 'success');
                 loadUsers();
             } catch (error) {
@@ -1105,7 +1136,7 @@
         async function rejectUser(id) {
             if (!confirm('Reject this user?')) return;
             try {
-                await apiCall(`/users/${id}/reject`, 'PATCH');
+                await apiCall(`/admin/users/${id}/reject`, 'PATCH');
                 showMessage('usersMessage', 'User rejected', 'success');
                 loadUsers();
             } catch (error) {
@@ -1143,7 +1174,9 @@
                 const data = await apiCall('/projects');
                 const projects = data.data || [];
                 const select = document.getElementById(selectId);
-                select.innerHTML = projects.map(p => `<option value="${p.ID}">${p.Name}</option>`).join('');
+                // Keep the first option (default) and append projects
+                const defaultOption = select.querySelector('option[value=""]');
+                select.innerHTML = defaultOption.outerHTML + projects.map(p => `<option value="${p.ID}">${p.Name}</option>`).join('');
             } catch (error) {
                 console.error('Error loading projects:', error);
             }
@@ -1600,7 +1633,7 @@
                         <td><span class="badge badge-custom bg-primary">${log.Action}</span></td>
                         <td><span class="badge badge-custom bg-info">${log.EntityType}</span></td>
                         <td>${log.EntityID}</td>
-                        <td>${log.UserID}</td>
+                        <td>${log.User?.Name || log.UserID || 'Unknown'}</td>
                         <td>${log.Details || '-'}</td>
                         <td>${new Date(log.Timestamp).toLocaleString()}</td>
                     </tr>

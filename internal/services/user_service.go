@@ -25,12 +25,24 @@ func GetUser(id string) (models.User, error) {
 	return repositories.GetUserByID(id)
 }
 
-func UpdateUser(User *models.User) error {
-	return repositories.UpdateUser(User)
+func UpdateUser(User *models.User, updatedBy uint) error {
+	err := repositories.UpdateUser(User)
+	if err != nil {
+		return err
+	}
+
+	LogActivity("UPDATED", "USER", User.ID, updatedBy, "User details updated")
+	return nil
 }
 
-func DeleteUser(User *models.User) error {
-	return repositories.DeleteUser(User)
+func DeleteUser(User *models.User, deletedBy uint) error {
+	err := repositories.DeleteUser(User)
+	if err != nil {
+		return err
+	}
+
+	LogActivity("DELETED", "USER", User.ID, deletedBy, "User account was deleted")
+	return nil
 }
 
 func ApproveUser(id string, approvedBy uint) error {

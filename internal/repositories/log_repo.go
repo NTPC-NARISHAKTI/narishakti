@@ -11,13 +11,13 @@ func CreateLog(log *models.Log) error {
 
 func GetLogs() ([]models.Log, error) {
 	var logs []models.Log
-	err := database.DB.Order("timestamp DESC").Find(&logs).Error
+	err := database.DB.Preload("User").Order("timestamp DESC").Find(&logs).Error
 	return logs, err
 }
 
 func GetLogByID(id string) (models.Log, error) {
 	var log models.Log
-	err := database.DB.First(&log, id).Error
+	err := database.DB.Preload("User").First(&log, id).Error
 	return log, err
 }
 

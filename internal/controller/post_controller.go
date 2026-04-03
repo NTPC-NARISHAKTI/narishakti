@@ -142,7 +142,14 @@ func UpdatePost(c *gin.Context) {
 		return
 	}
 
-	err = services.UpdatePost(&post)
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "User not found in context"))
+		return
+	}
+	updatedBy := uint(userID.(float64))
+
+	err = services.UpdatePost(&post, updatedBy)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to update post", err.Error()))
 		return
@@ -160,7 +167,14 @@ func DeletePost(c *gin.Context) {
 		return
 	}
 
-	err = services.DeletePost(&post)
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "User not found in context"))
+		return
+	}
+	deletedBy := uint(userID.(float64))
+
+	err = services.DeletePost(&post, deletedBy)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to delete post", err.Error()))
 		return

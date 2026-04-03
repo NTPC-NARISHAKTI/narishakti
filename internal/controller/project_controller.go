@@ -79,7 +79,14 @@ func UpdateProject(c *gin.Context) {
 		return
 	}
 
-	err = services.UpdateProject(&project)
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "User not found in context"))
+		return
+	}
+	updatedBy := uint(userID.(float64))
+
+	err = services.UpdateProject(&project, updatedBy)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to update project", err.Error()))
 		return
@@ -97,7 +104,14 @@ func DeleteProject(c *gin.Context) {
 		c.JSON(http.StatusNotFound, utils.ErrorResponse("Project not found", "Project not found"))
 		return
 	}
-	err = services.DeleteProject(&project)
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "User not found in context"))
+		return
+	}
+	deletedBy := uint(userID.(float64))
+
+	err = services.DeleteProject(&project, deletedBy)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to delete project", err.Error()))
 		return
