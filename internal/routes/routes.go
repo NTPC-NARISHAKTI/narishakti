@@ -14,7 +14,7 @@ func SetupRoutes(r *gin.Engine) {
 	// Routes Private
 	// Project routes
 	r.POST("/projects", controllers.CreateProject)
-	auth.GET("/projects", controllers.GetProjects)
+	r.GET("/projects", controllers.GetProjects) // public for registration dropdown
 	auth.GET("/projects/:id", controllers.GetProject)
 	auth.PUT("/projects/:id", controllers.UpdateProject)
 	auth.DELETE("/projects/:id", controllers.DeleteProject)

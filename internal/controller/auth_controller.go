@@ -24,10 +24,7 @@ func Register(c *gin.Context) {
 		PasswordHash:   input.Password, // It will be hashed inside RegisterUser service
 		Role:           "USER",
 		ApprovalStatus: "PENDING",
-	}
-
-	if input.ProjectID != nil {
-		user.ProjectID = input.ProjectID
+		ProjectID:      input.ProjectID,
 	}
 
 	createdUser, err := services.RegisterUser(&user, input.ConfirmPassword)

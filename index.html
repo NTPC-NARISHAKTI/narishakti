@@ -251,9 +251,9 @@
                             <input type="password" class="form-control" id="registerConfirmPassword" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Project (Optional)</label>
-                            <select class="form-control" id="registerProject">
-                                <option value="">Select a project (optional)</option>
+                            <label class="form-label">Project</label>
+                            <select class="form-control" id="registerProject" required>
+                                <option value="">Select a project</option>
                             </select>
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Register</button>
@@ -787,10 +787,12 @@
                 return;
             }
 
-            const registerData = { name, empNo, email, password, confirmPassword };
-            if (projectId) {
-                registerData.projectId = parseInt(projectId);
+            if (!projectId) {
+                showMessage('authMessage', 'Please select a project.', 'danger');
+                return;
             }
+
+            const registerData = { name, empNo, email, password, confirmPassword, projectId: parseInt(projectId) };
 
             try {
                 const response = await fetch(`${API_URL}/register`, {
@@ -1172,7 +1174,9 @@
                 const data = await apiCall('/projects');
                 const projects = data.data || [];
                 const select = document.getElementById(selectId);
-                select.innerHTML = projects.map(p => `<option value="${p.ID}">${p.Name}</option>`).join('');
+                // Keep the first option (default) and append projects
+                const defaultOption = select.querySelector('option[value=""]');
+                select.innerHTML = defaultOption.outerHTML + projects.map(p => `<option value="${p.ID}">${p.Name}</option>`).join('');
             } catch (error) {
                 console.error('Error loading projects:', error);
             }

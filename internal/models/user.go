@@ -20,7 +20,7 @@ type RegisterInput struct {
 	Email           string `json:"email" binding:"required,email"`
 	Password        string `json:"password" binding:"required,min=6"`
 	ConfirmPassword string `json:"confirmPassword" binding:"required,eqfield=Password"`
-	ProjectID       *uint  `json:"projectId"`
+	ProjectID       *uint  `json:"projectId" binding:"required"`
 }
 
 type LoginInput struct {
