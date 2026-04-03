@@ -19,13 +19,18 @@ func Register(c *gin.Context) {
 
 	user := models.User{
 		Name:           input.Name,
+		EmpNo:          input.EmpNo,
 		Email:          input.Email,
 		PasswordHash:   input.Password, // It will be hashed inside RegisterUser service
 		Role:           "USER",
 		ApprovalStatus: "PENDING",
 	}
 
-	createdUser, err := services.RegisterUser(&user)
+	if input.ProjectID != nil {
+		user.ProjectID = input.ProjectID
+	}
+
+	createdUser, err := services.RegisterUser(&user, input.ConfirmPassword)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to register user", err.Error()))
 		return

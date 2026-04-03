@@ -25,10 +25,22 @@ func GetProject(id string) (models.Project, error) {
 	return repositories.GetProjectByID(id)
 }
 
-func UpdateProject(Project *models.Project) error {
-	return repositories.UpdateProject(Project)
+func UpdateProject(Project *models.Project, updatedBy uint) error {
+	err := repositories.UpdateProject(Project)
+	if err != nil {
+		return err
+	}
+
+	LogActivity("UPDATED", "PROJECT", Project.ID, updatedBy, "Project details updated")
+	return nil
 }
 
-func DeleteProject(Project *models.Project) error {
-	return repositories.DeleteProject(Project)
+func DeleteProject(Project *models.Project, deletedBy uint) error {
+	err := repositories.DeleteProject(Project)
+	if err != nil {
+		return err
+	}
+
+	LogActivity("DELETED", "PROJECT", Project.ID, deletedBy, "Project was deleted")
+	return nil
 }

@@ -38,3 +38,12 @@ func GetUserByEmail(email string) (*models.User, error) {
 	}
 	return &user, nil
 }
+
+func GetUserByEmpNo(empNo string) (*models.User, error) {
+	var user models.User
+	err := database.DB.Preload("Project").Where("emp_no = ?", empNo).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}

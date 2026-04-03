@@ -36,8 +36,8 @@ func SetupRoutes(r *gin.Engine) {
 	// Admin user routes
 	admin := auth.Group("/admin")
 	admin.Use(middleware.RoleMiddleware("ADMIN"))
-	r.PATCH("/users/:id/approve", controllers.ApproveUser)
-	r.PATCH("/users/:id/reject", controllers.RejectUser)
+	admin.PATCH("/users/:id/approve", controllers.ApproveUser)
+	admin.PATCH("/users/:id/reject", controllers.RejectUser)
 
 	// Inventory routes
 	auth.POST("/inventories", controllers.CreateInventory)

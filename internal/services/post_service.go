@@ -101,10 +101,22 @@ func GetPost(id string) (models.Post, error) {
 	return repositories.GetPostByID(id)
 }
 
-func UpdatePost(post *models.Post) error {
-	return repositories.UpdatePost(post)
+func UpdatePost(post *models.Post, updatedBy uint) error {
+	err := repositories.UpdatePost(post)
+	if err != nil {
+		return err
+	}
+
+	LogActivity("UPDATED", "POST", post.ID, updatedBy, "Post details updated")
+	return nil
 }
 
-func DeletePost(post *models.Post) error {
-	return repositories.DeletePost(post)
+func DeletePost(post *models.Post, deletedBy uint) error {
+	err := repositories.DeletePost(post)
+	if err != nil {
+		return err
+	}
+
+	LogActivity("DELETED", "POST", post.ID, deletedBy, "Post was deleted")
+	return nil
 }

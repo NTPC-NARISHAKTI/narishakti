@@ -79,7 +79,14 @@ func UpdateProduct(c *gin.Context) {
 		return
 	}
 
-	err = services.UpdateProduct(&product)
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "User not found in context"))
+		return
+	}
+	updatedBy := uint(userID.(float64))
+
+	err = services.UpdateProduct(&product, updatedBy)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to update product", err.Error()))
 		return
@@ -97,7 +104,14 @@ func DeleteProduct(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
 		return
 	}
-	err = services.DeleteProduct(&product)
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "User not found in context"))
+		return
+	}
+	deletedBy := uint(userID.(float64))
+
+	err = services.DeleteProduct(&product, deletedBy)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
