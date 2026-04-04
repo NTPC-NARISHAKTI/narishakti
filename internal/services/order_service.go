@@ -80,14 +80,19 @@ func UpdateOrder(order *models.Order) error {
 		return errors.New("order quantity exceeds available remaining quantity in post")
 	}
 
-	// Check if status is being changed to CONFIRMED
-	if existingOrder.OrderStatus != "CONFIRMED" && order.OrderStatus == "CONFIRMED" {
+	// Check if status is being changed to CONFIRMED or COMPLETED (from a non-final state)
+	if (existingOrder.OrderStatus == "PENDING" || existingOrder.OrderStatus == "CANCELLED") &&
+		(order.OrderStatus == "CONFIRMED" || order.OrderStatus == "COMPLETED") {
 		// Reduce inventory
 		if err := reduceInventory(order.PostID, order.OrderQuantity); err != nil {
 			return err
 		}
+		// Increment TotalOrders in the post (for display purposes)
+		database.DB.Model(&models.Post{}).
+			Where("id = ?", order.PostID).
+			Update("total_orders", gorm.Expr("total_orders + ?", order.OrderQuantity))
 		// Log the order confirmation
-		LogActivity("CONFIRMED", "ORDER", order.ID, order.UserID, "Order was confirmed and inventory was reduced")
+		LogActivity("CONFIRMED", "ORDER", order.ID, order.UserID, "Order confirmed/completed and inventory was reduced")
 	}
 
 	err := repositories.UpdateOrder(order)

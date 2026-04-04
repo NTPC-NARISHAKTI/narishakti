@@ -762,6 +762,13 @@
                     currentUser = data.data.user || { name: 'User', role: 'USER' };
                     localStorage.setItem('authToken', authToken);
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    // Role-based routing: Redirect non-admin users to user dashboard
+                    if (currentUser.role !== 'ADMIN') {
+                        window.location.href = 'user.html';
+                        return;
+                    }
+                    
                     showDashboard();
                     loadDashboardStats();
                 } else {
