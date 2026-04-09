@@ -90,7 +90,7 @@ func UpdateOrder(order *models.Order) error {
 		// Increment TotalOrders in the post (for display purposes)
 		database.DB.Model(&models.Post{}).
 			Where("id = ?", order.PostID).
-			Update("total_orders", gorm.Expr("total_orders + ?", order.OrderQuantity))
+			Update("total_orders", gorm.Expr("total_orders + 1"))
 		// Log the order confirmation
 		LogActivity("CONFIRMED", "ORDER", order.ID, order.UserID, "Order confirmed/completed and inventory was reduced")
 	}
@@ -130,5 +130,30 @@ func reduceInventory(postID uint, quantity int) error {
 }
 
 func DeleteOrder(order *models.Order) error {
-	return repositories.DeleteOrder(order)
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		var post models.Post
+		if err := tx.First(&post, order.PostID).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Model(&models.Inventory{}).
+			Where("product_id = ?", post.ProductID).
+			Update("quantity", gorm.Expr("quantity + ?", order.OrderQuantity)).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Model(&models.Post{}).
+			Where("id = ?", order.PostID).
+			Update("total_orders", gorm.Expr("total_orders - 1")).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Delete(order).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	return err
 }
