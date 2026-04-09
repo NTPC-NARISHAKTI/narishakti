@@ -70,4 +70,5 @@ func SetupRoutes(r *gin.Engine) {
 	// Auth routes Public
 	r.POST("/register", controllers.Register)
 	r.POST("/login", controllers.Login)
+	auth.GET("/me", controllers.GetCurrentUser)
 }

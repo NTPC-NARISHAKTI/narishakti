@@ -63,3 +63,22 @@ func Login(c *gin.Context) {
 		},
 	}))
 }
+
+func GetCurrentUser(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "User not found in context"))
+		return
+	}
+
+	role, exists := c.Get("role")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "Role not found in context"))
+		return
+	}
+
+	c.JSON(http.StatusOK, utils.SuccessResponse("User info retrieved", gin.H{
+		"id":   userID,
+		"role": role,
+	}))
+}

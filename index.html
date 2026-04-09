@@ -735,11 +735,63 @@
         let editingId = null;
 
         // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             console.log('Page loaded, checking auth token:', authToken);
+            
+            // First, immediately hide the dashboard until verified
+            document.getElementById('dashboard').style.display = 'none';
+            
             if (authToken) {
-                showDashboard();
-                loadDashboardStats();
+                // Verify user is admin from server
+                try {
+                    const response = await fetch(`${API_URL}/me`, {
+                        method: 'GET',
+                        headers: { 
+                            'Authorization': `Bearer ${authToken}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    console.log('Auth verification response status:', response.status);
+                    
+                    if (!response.ok) {
+                        console.log('Auth verification failed - invalid token');
+                        localStorage.removeItem('authToken');
+                        localStorage.removeItem('currentUser');
+                        window.location.href = 'user.html';
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    console.log('Auth verification response:', data);
+                    
+                    if (data.success && data.data) {
+                        const userRole = data.data.role;
+                        
+                        console.log('User role from server:', userRole);
+                        
+                        // Check if user is admin
+                        if (userRole !== 'ADMIN') {
+                            console.log('User is not admin, redirecting to user.html');
+                            localStorage.removeItem('authToken');
+                            localStorage.removeItem('currentUser');
+                            window.location.href = 'user.html';
+                            return;
+                        }
+                        
+                        // User is admin, show dashboard
+                        document.getElementById('dashboard').style.display = 'block';
+                        showDashboard();
+                        loadDashboardStats();
+                    } else {
+                        throw new Error('Invalid response');
+                    }
+                } catch (error) {
+                    console.error('Auth verification failed:', error);
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('currentUser');
+                    window.location.href = 'user.html';
+                }
             } else {
                 showAuth();
             }

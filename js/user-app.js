@@ -17,16 +17,47 @@ let currentPost = null;
 // ===================================
 // Initialize Application
 // ===================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     console.log('User Dashboard initialized');
     
     if (authToken) {
-        // Check if user is admin - redirect to admin dashboard
-        if (currentUser.role === 'ADMIN') {
-            window.location.href = 'index.html';
-            return;
+        try {
+            const response = await fetch(`${API_URL}/me`, {
+                method: 'GET',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Unauthorized');
+            }
+            
+            const data = await response.json();
+            if (data.success && data.data) {
+                const userRole = data.data.role;
+                
+                // Update stored user with verified role
+                currentUser = { ...currentUser, role: userRole };
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                
+                // Check if user is admin - redirect to admin dashboard
+                if (userRole === 'ADMIN') {
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
+                showUserDashboard();
+            } else {
+                throw new Error('Invalid response');
+            }
+        } catch (error) {
+            console.error('Auth verification failed:', error);
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            showAuth();
         }
-        showUserDashboard();
     } else {
         showAuth();
     }
@@ -259,34 +290,38 @@ function renderProducts(posts) {
         const initialText = postOrders.length > 0 
             ? `<span class="ticker-text"><strong>${postOrders[0].User?.Name || 'Someone'}</strong> just ordered ${postOrders[0].OrderQuantity}x</span>`
             : `<span class="ticker-text" style="color: var(--text-muted);">Be the first to order!</span>`;
+        const projectName = post.Product?.Project?.Name || '';
         
         return `
         <div class="product-card">
+            <div class="product-header-bar">
+                <div class="product-header-info">
+                    <span class="product-title">${post.Product?.Name || 'Product'}</span>
+                    ${projectName ? `<span class="product-project-tag">${projectName}</span>` : ''}
+                </div>
+                <span class="product-price-tag">$${(post.Price || 0).toFixed(2)}</span>
+            </div>
             ${post.ProductImg ? 
                 `<img src="${API_URL}/${post.ProductImg}" class="product-image" alt="${post.Product?.Name || 'Product'}">` :
                 `<div class="product-image placeholder">
                     <i class="bi bi-box"></i>
                 </div>`
             }
-            <div class="product-info">
-                <h3 class="product-title">${post.Product?.Name || 'Product'}</h3>
-                <p class="product-description">${post.Product?.Description || 'No description available'}</p>
-                <div class="product-stats">
-                    <span><i class="bi bi-cart3"></i> ${post.TotalOrders || 0} ordered</span>
-                    <span><i class="bi bi-box-seam"></i> ${post.RemainingQty !== undefined ? post.RemainingQty : post.TotalQty} left</span>
-                </div>
-                <div class="product-footer mt-2">
-                    <span class="product-price">$${(post.Price || 0).toFixed(2)}</span>
-                    <button class="btn btn-primary btn-order" onclick="openOrderModal(${post.ID})">
-                        Order
-                    </button>
-                </div>
-            </div>
             <div class="product-activity-ticker" id="ticker-${post.ID}">
                 <div class="ticker-content active">
                     <i class="bi bi-lightning-fill ticker-icon"></i>
                     ${initialText}
                 </div>
+            </div>
+            <div class="product-info">
+                <div class="product-stats">
+                    <span><i class="bi bi-cart3"></i> ${post.TotalOrders || 0} orders</span>
+                    <span><i class="bi bi-box-seam"></i> ${post.RemainingQty !== undefined ? post.RemainingQty : post.TotalQty} left</span>
+                </div>
+                <p class="product-description">${post.Product?.Description || 'No description available'}</p>
+                <button class="btn btn-primary btn-order w-100" onclick="openOrderModal(${post.ID})">
+                    <i class="bi bi-bag-plus"></i> Order Now
+                </button>
             </div>
         </div>
     `}).join('');
