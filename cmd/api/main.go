@@ -39,6 +39,8 @@ func main() {
 
 	// Serve static files from uploads directory
 	router.Static("/uploads", "./uploads")
+	// Serve Narishakti frontend (captain/admin/user pages) from same host/port
+	router.Static("/narishakti", "./narishakti")
 
 	log.Println("Server running on port 8080")
 
