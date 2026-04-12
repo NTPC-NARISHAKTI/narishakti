@@ -261,7 +261,10 @@ async function loadMarketplace() {
         allPosts = postsData.data || [];
         allOrders = ordersData.data || [];
         
-        if (allPosts.length === 0) {
+        // Filter only active posts for user view
+        const activePosts = allPosts.filter(post => post.Active !== false);
+        
+        if (activePosts.length === 0) {
             productsGrid.innerHTML = `
                 <div class="empty-state" style="grid-column: 1 / -1;">
                     <i class="bi bi-box-seam"></i>
@@ -272,7 +275,7 @@ async function loadMarketplace() {
             return;
         }
 
-        renderProducts(allPosts);
+        renderProducts(activePosts);
         
         // Start sliding activities for each product
         setTimeout(() => {

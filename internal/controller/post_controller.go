@@ -182,3 +182,30 @@ func DeletePost(c *gin.Context) {
 
 	c.JSON(http.StatusNoContent, utils.SuccessResponse("Post deleted successfully", nil))
 }
+
+func TogglePostActive(c *gin.Context) {
+	id := c.Param("id")
+
+	post, err := services.GetPost(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, utils.ErrorResponse("Post not found", "Post not found"))
+		return
+	}
+
+	post.Active = !post.Active
+
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "User not found in context"))
+		return
+	}
+	updatedBy := uint(userID.(float64))
+
+	err = services.UpdatePost(&post, updatedBy)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to toggle post status", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, utils.SuccessResponse("Post status updated successfully", post))
+}

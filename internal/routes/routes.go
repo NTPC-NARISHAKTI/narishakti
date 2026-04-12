@@ -52,6 +52,7 @@ func SetupRoutes(r *gin.Engine) {
 	auth.GET("/posts/:id", controllers.GetPost)
 	auth.PUT("/posts/:id", controllers.UpdatePost)
 	auth.DELETE("/posts/:id", controllers.DeletePost)
+	auth.PATCH("/posts/:id/toggle-active", controllers.TogglePostActive)
 
 	// Order routes
 	auth.POST("/orders", controllers.CreateOrder)

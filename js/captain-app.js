@@ -373,7 +373,9 @@ async function loadAllData() {
         allProducts = (productsRes.data || []).filter(p => p.ProjectID === projectId);
 
         updateStats();
-        renderMarketplace(allPosts);
+        // Filter only active posts for marketplace view
+        const activePosts = allPosts.filter(p => p.Active !== false);
+        renderMarketplace(activePosts);
         renderApprovals();
         renderOrders();
 
@@ -439,7 +441,6 @@ function renderMarketplace(posts) {
                         <div class="insta-card-user-name">${post.Product?.Name || 'Unknown Product'}</div>
                         <div class="insta-card-user-sub">Project #${post.Product?.ProjectID || '—'} · ${createdDate}</div>
                     </div>
-                    <i class="bi bi-three-dots-vertical"></i>
                 </div>
                 ${post.ProductImg
                     ? `<img src="${API_URL}/${post.ProductImg}" class="insta-card-image" alt="${post.Product?.Name || 'Product'}" onclick="viewProductDetails(${post.ID})">`
@@ -449,7 +450,6 @@ function renderMarketplace(posts) {
                     <i class="bi bi-heart" onclick="this.classList.toggle('active')"></i>
                     <i class="bi bi-chat" onclick="viewProductDetails(${post.ID})"></i>
                     <i class="bi bi-share" onclick="sharePost(${post.ID})"></i>
-                    <i class="bi bi-bookmark" onclick="this.classList.toggle('active')" style="margin-left: auto;"></i>
                 </div>
                 <div class="insta-card-body">
                     <div class="insta-card-price">
@@ -498,6 +498,126 @@ function sharePost(postId) {
         showToast('Share link copied!', 'success');
     }
 }
+
+// ──────────────────────────────────────────────────────────────
+//  MY POSTS SECTION
+// ──────────────────────────────────────────────────────────────
+let myPostsFilter = 'all';
+
+function renderMyPosts(posts) {
+    const grid = document.getElementById('myPostsGrid');
+    const empty = document.getElementById('myPostsEmpty');
+    
+    if (!posts || posts.length === 0) {
+        grid.innerHTML = '';
+        empty.style.display = 'flex';
+        return;
+    }
+    
+    empty.style.display = 'none';
+    
+    grid.innerHTML = posts.map(post => {
+        const remainingQty = (post.TotalQty || 0) - (post.TotalOrders || 0);
+        const isActive = post.Active !== false;
+        const statusClass = isActive ? 'status-active' : 'status-inactive';
+        const statusText = isActive ? 'Active' : 'Inactive';
+        const statusIcon = isActive ? 'bi-check-circle-fill' : 'bi-x-circle-fill';
+        const toggleText = isActive ? 'Deactivate' : 'Activate';
+        const toggleClass = isActive ? 'btn-outline-warning' : 'btn-outline-success';
+        
+        return `
+            <div class="insta-card">
+                <div class="insta-card-header">
+                    <img src="${avatarUrl(post.Product?.Name || 'P', '4f46e5')}" class="insta-card-avatar" alt="">
+                    <div class="insta-card-user">
+                        <div class="insta-card-user-name">${post.Product?.Name || 'Unknown Product'}</div>
+                        <div class="insta-card-user-sub">
+                            <span class="post-status ${statusClass}">
+                                <i class="bi ${statusIcon}"></i> ${statusText}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                ${post.ProductImg
+                    ? `<img src="${API_URL}/${post.ProductImg}" class="insta-card-image" alt="${post.Product?.Name || 'Product'}">`
+                    : `<div class="insta-card-image-placeholder"><i class="bi bi-image"></i></div>`
+                }
+                <div class="insta-card-body">
+                    <div class="insta-card-price">
+                        <span class="currency">₹</span>${(post.Price || 0).toFixed(2)}
+                    </div>
+                    <div class="insta-card-desc">
+                        ${post.Product?.Description || 'No description available'}
+                    </div>
+                    <div class="insta-card-meta">
+                        <span><i class="bi bi-box"></i> ${remainingQty} available</span>
+                        <span><i class="bi bi-cart3"></i> ${post.TotalOrders || 0} sold</span>
+                    </div>
+                </div>
+                <div class="insta-card-footer">
+                    <button class="btn ${toggleClass} btn-sm w-100" onclick="togglePostActive(${post.ID})">
+                        <i class="bi ${isActive ? 'bi-pause-circle' : 'bi-play-circle'}"></i> ${toggleText}
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function filterMyPosts(filter) {
+    myPostsFilter = filter;
+    
+    // Update button states
+    document.getElementById('filterAll').classList.remove('active');
+    document.getElementById('filterActive').classList.remove('active');
+    document.getElementById('filterInactive').classList.remove('active');
+    document.getElementById(`filter${filter.charAt(0).toUpperCase() + filter.slice(1)}`).classList.add('active');
+    
+    let filteredPosts = allPosts;
+    
+    if (filter === 'active') {
+        filteredPosts = allPosts.filter(p => p.Active !== false);
+    } else if (filter === 'inactive') {
+        filteredPosts = allPosts.filter(p => p.Active === false);
+    }
+    
+    renderMyPosts(filteredPosts);
+}
+
+async function togglePostActive(postId) {
+    try {
+        const data = await apiRequest(`/posts/${postId}/toggle-active`, 'PATCH');
+        if (data.success) {
+            // Update local state
+            const postIndex = allPosts.findIndex(p => p.ID === postId);
+            if (postIndex !== -1) {
+                allPosts[postIndex].Active = data.data.Active;
+            }
+            
+            // Re-render with current filter
+            filterMyPosts(myPostsFilter);
+            
+            // Also update marketplace if the post is active/inactive
+            const activePosts = allPosts.filter(p => p.Active !== false);
+            renderMarketplace(activePosts);
+            
+            showToast(`Post ${data.data.Active ? 'activated' : 'deactivated'} successfully`, 'success');
+        }
+    } catch (err) {
+        console.error('[ToggleActive] Failed:', err);
+        showToast('Failed to update post status: ' + err.message, 'danger');
+    }
+}
+
+// Override navigateTo to load My Posts when navigating
+const originalNavigateTo = navigateTo;
+navigateTo = function(section, event) {
+    originalNavigateTo(section, event);
+    
+    if (section === 'my-posts') {
+        renderMyPosts(allPosts);
+    }
+};
 
 // ──────────────────────────────────────────────────────────────
 //  ADD PRODUCT

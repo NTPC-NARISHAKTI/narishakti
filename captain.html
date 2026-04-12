@@ -165,6 +165,28 @@
                 </div>
             </section>
 
+            <!-- SECTION: My Posts -->
+            <section id="section-my-posts" class="content-section">
+                <div class="section-header">
+                    <h2><i class="bi bi-collection"></i> My Posts</h2>
+                    <div class="filter-toggle">
+                        <button class="btn btn-sm btn-outline-secondary active" id="filterAll" onclick="filterMyPosts('all')">All</button>
+                        <button class="btn btn-sm btn-outline-success" id="filterActive" onclick="filterMyPosts('active')">Active</button>
+                        <button class="btn btn-sm btn-outline-danger" id="filterInactive" onclick="filterMyPosts('inactive')">Inactive</button>
+                    </div>
+                </div>
+
+                <div id="myPostsMessage"></div>
+                <div class="products-grid" id="myPostsGrid">
+                    <!-- Filled by JS -->
+                </div>
+                <div class="empty-state" id="myPostsEmpty" style="display:none">
+                    <i class="bi bi-inbox"></i>
+                    <h4>No posts yet</h4>
+                    <p>Create your first post to see it here</p>
+                </div>
+            </section>
+
             <!-- SECTION: Add Product Form (re-purposed as Add Post) -->
             <section id="section-add-product" class="content-section">
                 <div class="section-header">
@@ -202,6 +224,10 @@
             <a href="#" class="nav-item" onclick="navigateTo('orders', event)">
                 <i class="bi bi-bag"></i>
                 <span>Orders</span>
+            </a>
+            <a href="#" class="nav-item" onclick="navigateTo('my-posts', event)">
+                <i class="bi bi-collection"></i>
+                <span>My Posts</span>
             </a>
             <a href="#" class="nav-item" onclick="showAddOptionsModal(); event.preventDefault();">
                 <i class="bi bi-plus-circle"></i>
