@@ -1,9 +1,11 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 
 	"marketplace/internal/models"
+	"marketplace/internal/repositories"
 	"marketplace/internal/services"
 	"marketplace/internal/utils"
 
@@ -56,10 +58,37 @@ func Login(c *gin.Context) {
 	c.JSON(http.StatusOK, utils.SuccessResponse("Login successful", gin.H{
 		"token": token,
 		"user": gin.H{
-			"id":    user.ID,
-			"name":  user.Name,
-			"email": user.Email,
-			"role":  user.Role,
+			"id":             user.ID,
+			"name":           user.Name,
+			"email":          user.Email,
+			"empNo":          user.EmpNo,
+			"role":           user.Role,
+			"projectId":      user.ProjectID,
+			"approvalStatus": user.ApprovalStatus,
 		},
+	}))
+}
+
+func GetCurrentUser(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "User not found in context"))
+		return
+	}
+
+	user, err := repositories.GetUserByID(fmt.Sprintf("%v", userID))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "User not found"))
+		return
+	}
+
+	c.JSON(http.StatusOK, utils.SuccessResponse("User info retrieved", gin.H{
+		"id":             user.ID,
+		"name":           user.Name,
+		"email":          user.Email,
+		"empNo":          user.EmpNo,
+		"role":           user.Role,
+		"projectId":      user.ProjectID,
+		"approvalStatus": user.ApprovalStatus,
 	}))
 }

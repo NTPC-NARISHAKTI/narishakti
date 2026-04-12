@@ -17,6 +17,9 @@ func Connect() {
 	dsn := "host=localhost user=marketplace_user password=narishakti_db_admin dbname=marketplace port=5432 sslmode=disable"
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Fatal("Failed to connect database")
+	}
 
 	db.AutoMigrate(
 		&models.Project{},
@@ -30,11 +33,7 @@ func Connect() {
 		&models.RegisterInput{},
 	)
 
-	if err != nil {
-		log.Fatal("Failed to connect database")
-	}
-
 	DB = db
 
-	log.Println("Database connected")
+	log.Println("Database connected and migrated successfully")
 }

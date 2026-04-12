@@ -10,22 +10,60 @@ const API_URL = 'http://localhost:8080';
 let authToken = localStorage.getItem('authToken');
 let currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
 let allPosts = [];
+let allOrders = [];
 let userOrders = [];
 let currentPost = null;
 
 // ===================================
 // Initialize Application
 // ===================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     console.log('User Dashboard initialized');
     
     if (authToken) {
-        // Check if user is admin - redirect to admin dashboard
-        if (currentUser.role === 'ADMIN') {
-            window.location.href = 'index.html';
-            return;
+        try {
+            const response = await fetch(`${API_URL}/me`, {
+                method: 'GET',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Unauthorized');
+            }
+            
+            const data = await response.json();
+            if (data.success && data.data) {
+                const userRole = data.data.role;
+                
+                // Update stored user with verified role
+                currentUser = { ...currentUser, role: userRole };
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                
+                // Check if user is admin - redirect to admin dashboard
+                if (userRole === 'ADMIN') {
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
+                // Check if user is CAPTAIN - redirect to captain dashboard
+                if (userRole === 'CAPTAIN') {
+                    window.location.href = 'captain.html';
+                    return;
+                }
+                
+                showUserDashboard();
+            } else {
+                throw new Error('Invalid response');
+            }
+        } catch (error) {
+            console.error('Auth verification failed:', error);
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            showAuth();
         }
-        showUserDashboard();
     } else {
         showAuth();
     }
@@ -63,17 +101,20 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         if (response.ok && data.success && data.data && data.data.token) {
             authToken = data.data.token;
             currentUser = data.data.user || { name: 'User', role: 'USER' };
+            localStorage.setItem('authToken', authToken);
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
             
-            // Check if admin - redirect to admin dashboard
+            // Role-based routing: Redirect users based on their role
             if (currentUser.role === 'ADMIN') {
-                localStorage.setItem('authToken', authToken);
-                localStorage.setItem('currentUser', JSON.stringify(currentUser));
                 window.location.href = 'index.html';
                 return;
             }
             
-            localStorage.setItem('authToken', authToken);
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            if (currentUser.role === 'CAPTAIN') {
+                window.location.href = 'captain.html';
+                return;
+            }
+            
             showUserDashboard();
             showToast('Login successful!', 'success');
         } else {
@@ -199,7 +240,6 @@ async function apiCall(endpoint, method = 'GET', body = null) {
 // ===================================
 async function loadMarketplace() {
     const productsGrid = document.getElementById('productsGrid');
-    const recentActivity = document.getElementById('recentActivity');
     
     // Show skeleton loaders
     productsGrid.innerHTML = `
@@ -208,14 +248,6 @@ async function loadMarketplace() {
             <div class="skeleton-card"></div>
             <div class="skeleton-card"></div>
             <div class="skeleton-card"></div>
-        </div>
-    `;
-    
-    recentActivity.innerHTML = `
-        <div class="skeleton-activity">
-            <div class="skeleton-activity-item"></div>
-            <div class="skeleton-activity-item"></div>
-            <div class="skeleton-activity-item"></div>
         </div>
     `;
 
@@ -227,12 +259,12 @@ async function loadMarketplace() {
         ]);
         
         allPosts = postsData.data || [];
-        const allOrders = ordersData.data || [];
+        allOrders = ordersData.data || [];
         
-        // Render recent activity first
-        renderRecentActivity(allOrders);
+        // Filter only active posts for user view
+        const activePosts = allPosts.filter(post => post.Active !== false);
         
-        if (allPosts.length === 0) {
+        if (activePosts.length === 0) {
             productsGrid.innerHTML = `
                 <div class="empty-state" style="grid-column: 1 / -1;">
                     <i class="bi bi-box-seam"></i>
@@ -243,7 +275,12 @@ async function loadMarketplace() {
             return;
         }
 
-        renderProducts(allPosts);
+        renderProducts(activePosts);
+        
+        // Start sliding activities for each product
+        setTimeout(() => {
+            startSlidingActivities();
+        }, 500);
     } catch (error) {
         console.error('Error loading marketplace:', error);
         productsGrid.innerHTML = `
@@ -254,104 +291,99 @@ async function loadMarketplace() {
                 <button class="btn btn-primary" onclick="loadMarketplace()">Retry</button>
             </div>
         `;
-        recentActivity.innerHTML = '';
     }
-}
-
-// ===================================
-// Recent Activity Section
-// ===================================
-function renderRecentActivity(orders) {
-    const recentActivity = document.getElementById('recentActivity');
-    
-    if (!orders || orders.length === 0) {
-        recentActivity.innerHTML = `
-            <div class="activity-empty">
-                <p>No recent activity yet. Be the first to order!</p>
-            </div>
-        `;
-        return;
-    }
-    
-    // Sort orders by date (most recent first) and take last 5
-    const recentOrders = orders
-        .sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt))
-        .slice(0, 5);
-    
-    recentActivity.innerHTML = recentOrders.map(order => {
-        const userName = order.User?.Name || 'Anonymous';
-        const productName = order.Post?.Product?.Name || 'Product';
-        const status = order.OrderStatus || 'PENDING';
-        const orderDate = new Date(order.CreatedAt);
-        
-        // Calculate delivery time if completed
-        let deliveryInfo = '';
-        if (status === 'COMPLETED' && order.OrderConfirmedAt) {
-            const deliveredDate = new Date(order.OrderConfirmedAt);
-            const days = Math.ceil((deliveredDate - orderDate) / (1000 * 60 * 60 * 24));
-            deliveryInfo = `Delivered in ${days} day${days !== 1 ? 's' : ''}`;
-        } else if (status === 'COMPLETED') {
-            deliveryInfo = 'Delivered';
-        } else if (status === 'CONFIRMED') {
-            deliveryInfo = 'Processing...';
-        } else {
-            deliveryInfo = 'Pending';
-        }
-        
-        // Determine icon type
-        let iconClass = 'processing';
-        let icon = 'bi-clock';
-        if (status === 'COMPLETED') {
-            iconClass = 'delivered';
-            icon = 'bi-check-circle';
-        } else if (status === 'CONFIRMED') {
-            iconClass = 'ordered';
-            icon = 'bi-cart-check';
-        }
-        
-        return `
-            <div class="activity-item">
-                <div class="activity-icon ${iconClass}">
-                    <i class="bi ${icon}"></i>
-                </div>
-                <div class="activity-content">
-                    <div class="activity-text">
-                        <strong>${userName}</strong> ordered "${productName}"
-                    </div>
-                    <div class="activity-time">${deliveryInfo} • ${orderDate.toLocaleDateString()}</div>
-                </div>
-            </div>
-        `;
-    }).join('');
 }
 
 function renderProducts(posts) {
     const productsGrid = document.getElementById('productsGrid');
     
-    productsGrid.innerHTML = posts.map(post => `
+    productsGrid.innerHTML = posts.map(post => {
+        const postOrders = getPostRecentOrders(post.ID);
+        const initialText = postOrders.length > 0 
+            ? `<span class="ticker-text"><strong>${postOrders[0].User?.Name || 'Someone'}</strong> just ordered ${postOrders[0].OrderQuantity}x</span>`
+            : `<span class="ticker-text" style="color: var(--text-muted);">Be the first to order!</span>`;
+        const projectName = post.Product?.Project?.Name || '';
+        
+        return `
         <div class="product-card">
+            <div class="product-header-bar">
+                <div class="product-header-info">
+                    <span class="product-title">${post.Product?.Name || 'Product'}</span>
+                    ${projectName ? `<span class="product-project-tag">${projectName}</span>` : ''}
+                </div>
+                <span class="product-price-tag">$${(post.Price || 0).toFixed(2)}</span>
+            </div>
             ${post.ProductImg ? 
                 `<img src="${API_URL}/${post.ProductImg}" class="product-image" alt="${post.Product?.Name || 'Product'}">` :
                 `<div class="product-image placeholder">
                     <i class="bi bi-box"></i>
                 </div>`
             }
-            <div class="product-info">
-                <h3 class="product-title">${post.Product?.Name || 'Product'}</h3>
-                <p class="product-description">${post.Product?.Description || 'No description available'}</p>
-                <div class="product-stats">
-                    <span><i class="bi bi-cart3"></i> ${post.TotalOrders || 0} ordered</span>
-                    <span><i class="bi bi-box-seam"></i> ${post.TotalQty - (post.TotalOrders || 0)} left</span>
-                </div>
-                <div class="product-footer mt-2">
-                    <span class="product-price">$${(post.Price || 0).toFixed(2)}</span>
-                    <button class="btn btn-primary btn-order" onclick="openOrderModal(${post.ID})">
-                        Order
-                    </button>
+            <div class="product-activity-ticker" id="ticker-${post.ID}">
+                <div class="ticker-content active">
+                    <i class="bi bi-lightning-fill ticker-icon"></i>
+                    ${initialText}
                 </div>
             </div>
+            <div class="product-info">
+                <div class="product-stats">
+                    <span><i class="bi bi-cart3"></i> ${post.TotalOrders || 0} orders</span>
+                    <span><i class="bi bi-box-seam"></i> ${post.RemainingQty !== undefined ? post.RemainingQty : post.TotalQty} left</span>
+                </div>
+                <p class="product-description">${post.Product?.Description || 'No description available'}</p>
+                <button class="btn btn-primary btn-order w-100" onclick="openOrderModal(${post.ID})">
+                    <i class="bi bi-bag-plus"></i> Order Now
+                </button>
+            </div>
         </div>
-    `).join('');
+    `}).join('');
+}
+
+function getPostRecentOrders(postId) {
+    if (!allOrders || allOrders.length === 0) return [];
+    
+    const postOrders = allOrders.filter(order => order.PostID === postId)
+        .sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt));
+    
+    return postOrders.slice(0, 5);
+}
+
+function startSlidingActivities() {
+    const tickers = document.querySelectorAll('.product-activity-ticker');
+    
+    tickers.forEach(ticker => {
+        const postId = parseInt(ticker.id.replace('ticker-', ''));
+        const postOrders = getPostRecentOrders(postId);
+        
+        if (postOrders.length <= 1) return;
+        
+        let currentIndex = 0;
+        
+        setInterval(() => {
+            const contents = ticker.querySelectorAll('.ticker-content');
+            const nextIndex = (currentIndex + 1) % postOrders.length;
+            
+            const currentEl = contents[0];
+            const nextEl = document.createElement('div');
+            nextEl.className = 'ticker-content';
+            nextEl.innerHTML = `
+                <i class="bi bi-lightning-fill ticker-icon"></i>
+                <span class="ticker-text"><strong>${postOrders[nextIndex].User?.Name || 'Someone'}</strong> just ordered ${postOrders[nextIndex].OrderQuantity}x</span>
+            `;
+            ticker.appendChild(nextEl);
+            
+            setTimeout(() => {
+                currentEl.classList.remove('active');
+                currentEl.classList.add('slide-out');
+                nextEl.classList.add('active');
+            }, 50);
+            
+            setTimeout(() => {
+                currentEl.remove();
+                currentIndex = nextIndex;
+            }, 500);
+        }, 4000);
+    });
 }
 
 // Search functionality

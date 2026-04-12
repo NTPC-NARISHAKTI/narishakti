@@ -90,6 +90,7 @@ func GetPostsWithRemainingQty() ([]map[string]interface{}, error) {
 			"TotalQty":     post.TotalQty,
 			"RemainingQty": remainingQty,
 			"TotalOrders":  post.TotalOrders,
+			"Active":       post.Active,
 		}
 		result = append(result, postData)
 	}

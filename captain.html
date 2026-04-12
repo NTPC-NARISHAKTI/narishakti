@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Captain Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/captain-styles.css">
+</head>
+<body>
+
+    <!-- ============================================================
+         AUTH SCREEN (login)
+    ============================================================ -->
+    <div id="authContainer" class="auth-container">
+        <div class="auth-card">
+            <div class="logo">
+                <i class="bi bi-shield-check"></i>
+                <span>Captain Dashboard</span>
+            </div>
+
+            <form id="loginForm">
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" id="loginEmail" placeholder="captain@example.com" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-control" id="loginPassword" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100" id="loginBtn">
+                    <span id="loginBtnText">Login</span>
+                    <span id="loginSpinner" class="spinner-border spinner-border-sm ms-2" style="display:none" role="status"></span>
+                </button>
+            </form>
+            <div id="authMessage" class="mt-3"></div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         CAPTAIN DASHBOARD
+    ============================================================ -->
+    <div id="captainDashboard" style="display:none">
+
+        <!-- Top Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <i class="bi bi-shield-check"></i>
+                    <span>Captain</span>
+                </div>
+                <div class="header-right">
+                    <span id="projectBadge" class="badge bg-info me-2">Project #—</span>
+                    <button onclick="logout()" class="btn btn-outline-danger btn-sm">
+                        <i class="bi bi-box-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-card">
+                <i class="bi bi-box-seam stat-icon"></i>
+                <div class="stat-info">
+                    <span class="stat-value" id="totalProducts">0</span>
+                    <span class="stat-label">Products</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <i class="bi bi-file-post stat-icon"></i>
+                <div class="stat-info">
+                    <span class="stat-value" id="totalPosts">0</span>
+                    <span class="stat-label">Posts</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <i class="bi bi-cart3 stat-icon"></i>
+                <div class="stat-info">
+                    <span class="stat-value" id="totalOrders">0</span>
+                    <span class="stat-label">Orders</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <i class="bi bi-people stat-icon"></i>
+                <div class="stat-info">
+                    <span class="stat-value" id="totalMembers">0</span>
+                    <span class="stat-label">Members</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+
+            <!-- SECTION: Marketplace (posts/products) - Instagram Style -->
+            <section id="section-marketplace" class="content-section active">
+                <div class="section-header">
+                    <h2><i class="bi bi-shop"></i> Marketplace</h2>
+                <button class="btn btn-primary btn-sm" onclick="showAddPostModal()">
+                    <i class="bi bi-plus-lg"></i> Add Post
+                </button>
+                </div>
+
+                <div class="search-bar">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="searchProducts" placeholder="Search marketplace..." oninput="filterMarketplace()">
+                </div>
+
+                <div id="marketplaceMessage"></div>
+
+                <!-- Instagram-style feed -->
+                <div class="insta-feed" id="instaFeed">
+                    <!-- Loading skeletons -->
+                    <div class="insta-skeleton-container">
+                        <div class="insta-skeleton-card"></div>
+                        <div class="insta-skeleton-card"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: Pending Approvals -->
+            <section id="section-approvals" class="content-section">
+                <div class="section-header">
+                    <h2><i class="bi bi-person-check"></i> Approvals</h2>
+                    <span class="badge bg-warning text-dark" id="pendingCountBadge" style="display:none">0</span>
+                </div>
+
+                <div id="approvalsMessage"></div>
+                <div id="approvalsList" class="requests-list">
+                    <!-- Filled by JS -->
+                </div>
+                <div class="empty-state" id="approvalsEmpty" style="display:none">
+                    <i class="bi bi-check-circle"></i>
+                    <h4>All caught up!</h4>
+                    <p>No pending approval requests</p>
+                </div>
+            </section>
+
+            <!-- SECTION: Orders -->
+            <section id="section-orders" class="content-section">
+                <div class="section-header">
+                    <h2><i class="bi bi-bag"></i> Orders</h2>
+                </div>
+
+                <div class="filter-row">
+                    <select id="orderFilter" class="form-select form-select-sm" onchange="filterOrders()">
+                        <option value="ALL">All Status</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="CONFIRMED">Confirmed</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="REJECTED">Rejected</option>
+                    </select>
+                </div>
+
+                <div id="ordersMessage"></div>
+                <div id="ordersList" class="orders-list">
+                    <!-- Filled by JS -->
+                </div>
+                <div class="empty-state" id="ordersEmpty" style="display:none">
+                    <i class="bi bi-bag-x"></i>
+                    <h4>No orders yet</h4>
+                    <p>Orders from your project will appear here</p>
+                </div>
+            </section>
+
+            <!-- SECTION: My Posts -->
+            <section id="section-my-posts" class="content-section">
+                <div class="section-header">
+                    <h2><i class="bi bi-collection"></i> My Posts</h2>
+                    <div class="filter-toggle">
+                        <button class="btn btn-sm btn-outline-secondary active" id="filterAll" onclick="filterMyPosts('all')">All</button>
+                        <button class="btn btn-sm btn-outline-success" id="filterActive" onclick="filterMyPosts('active')">Active</button>
+                        <button class="btn btn-sm btn-outline-danger" id="filterInactive" onclick="filterMyPosts('inactive')">Inactive</button>
+                    </div>
+                </div>
+
+                <div id="myPostsMessage"></div>
+                <div class="products-grid" id="myPostsGrid">
+                    <!-- Filled by JS -->
+                </div>
+                <div class="empty-state" id="myPostsEmpty" style="display:none">
+                    <i class="bi bi-inbox"></i>
+                    <h4>No posts yet</h4>
+                    <p>Create your first post to see it here</p>
+                </div>
+            </section>
+
+            <!-- SECTION: Add Product Form (re-purposed as Add Post) -->
+            <section id="section-add-product" class="content-section">
+                <div class="section-header">
+                    <h2><i class="bi bi-plus-circle"></i> Create New Post</h2>
+                </div>
+
+                <div class="form-card">
+                    <h5 class="mb-3"><i class="bi bi-info-circle"></i> How to Create a Post</h5>
+                    <ol class="text-muted mb-3" style="font-size: 13px;">
+                        <li class="mb-2">Click the button below to open the post creation form</li>
+                        <li class="mb-2">Select a product from your project's inventory</li>
+                        <li class="mb-2">Enter the price and available quantity</li>
+                        <li class="mb-2">Optionally upload a product image</li>
+                        <li>Click "Create Post" to publish</li>
+                    </ol>
+                    <button class="btn btn-primary w-100" onclick="showAddPostModal()">
+                        <i class="bi bi-plus-lg"></i> Create New Post
+                    </button>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <a href="#" class="nav-item active" onclick="navigateTo('marketplace', event)">
+                <i class="bi bi-shop"></i>
+                <span>Market</span>
+            </a>
+            <a href="#" class="nav-item" onclick="navigateTo('approvals', event)">
+                <i class="bi bi-person-check"></i>
+                <span>Approvals</span>
+                <span class="nav-badge" id="navBadge" style="display:none">0</span>
+            </a>
+            <a href="#" class="nav-item" onclick="navigateTo('orders', event)">
+                <i class="bi bi-bag"></i>
+                <span>Orders</span>
+            </a>
+            <a href="#" class="nav-item" onclick="navigateTo('my-posts', event)">
+                <i class="bi bi-collection"></i>
+                <span>My Posts</span>
+            </a>
+            <a href="#" class="nav-item" onclick="showAddOptionsModal(); event.preventDefault();">
+                <i class="bi bi-plus-circle"></i>
+                <span>Add</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- ============================================================
+         MODAL: Order Status Update
+    ============================================================ -->
+    <div class="modal fade" id="orderStatusModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Update Order Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="orderModalInfo" class="mb-3 text-muted small"></div>
+                    <div class="mb-3">
+                        <label class="form-label">New Status</label>
+                        <select class="form-select" id="newOrderStatus">
+                            <option value="PENDING">PENDING</option>
+                            <option value="CONFIRMED">CONFIRMED</option>
+                            <option value="COMPLETED">COMPLETED</option>
+                            <option value="REJECTED">REJECTED</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitOrderStatus()">Update</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         TOAST
+    ============================================================ -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="liveToast" class="toast" role="alert">
+            <div class="toast-body d-flex align-items-center" id="toastBody">
+                <span id="toastMessage" class="flex-grow-1"></span>
+                <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         MODAL: Add Post
+    ============================================================ -->
+    <div class="modal fade" id="addPostModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Add New Post</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="addPostMessage" class="mb-3"></div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Select Product <span class="text-danger">*</span></label>
+                        <select class="form-select" id="postProductSelect" required>
+                            <option value="">Loading products...</option>
+                        </select>
+                        <div id="productSelectedInfo" class="mt-2 p-2 rounded" style="display:none; background: var(--bg);">
+                            <small class="text-muted" id="selectedProductDesc"></small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Price (₹) <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="postPrice" step="0.01" min="0" placeholder="0.00" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Total Quantity <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="postQuantity" min="1" placeholder="Enter quantity" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Product Image</label>
+                        <input type="file" class="form-control" id="postImage" accept="image/*">
+                        <small class="text-muted">Upload an image for the product (optional)</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="submitPostBtn" onclick="submitAddPost()">
+                        <span id="submitPostSpinner" class="spinner-border spinner-border-sm me-2" style="display:none"></span>
+                        Create Post
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         MODAL: View Product Details (from marketplace)
+    ============================================================ -->
+    <div class="modal fade" id="productDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="productDetailTitle">Product Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="productDetailImage" class="text-center mb-3"></div>
+                    <div class="mb-2">
+                        <strong>Price:</strong> <span id="productDetailPrice"></span>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Available:</strong> <span id="productDetailQty"></span>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Description:</strong>
+                        <p id="productDetailDesc" class="text-muted mb-0"></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         MODAL: Add Product
+    ============================================================ -->
+    <div class="modal fade" id="addProductModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Add New Product</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="addProductMessage" class="mb-3"></div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Product Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="productName" placeholder="Enter product name" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="productDescription" rows="3" placeholder="Enter product description (optional)"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Product Image</label>
+                        <input type="file" class="form-control" id="productImageFile" accept="image/*">
+                        <small class="text-muted">Upload a product image (optional)</small>
+                    </div>
+                    
+                    <div class="info-box">
+                        <i class="bi bi-info-circle"></i>
+                        <p>After creating the product, you can create a post to sell it in the marketplace.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="submitProductBtn" onclick="submitAddProduct()">
+                        <span id="submitProductSpinner" class="spinner-border spinner-border-sm me-2" style="display:none"></span>
+                        Create Product
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         MODAL: Add Options (Product or Post)
+    ============================================================ -->
+    <div class="modal fade" id="addOptionsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-lg"></i> What would you like to add?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="add-option-card" onclick="openAddProductModal()">
+                        <div class="add-option-icon" style="background: #dbeafe;">
+                            <i class="bi bi-box-seam" style="color: #1e40af;"></i>
+                        </div>
+                        <div class="add-option-info">
+                            <h6>Add Product</h6>
+                            <p>Create a new product for your project</p>
+                        </div>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                    <div class="add-option-card" onclick="showAddPostModal(); bootstrap.Modal.getInstance(document.getElementById('addOptionsModal')).hide();">
+                        <div class="add-option-icon" style="background: #d1fae5;">
+                            <i class="bi bi-file-post" style="color: #065f46;"></i>
+                        </div>
+                        <div class="add-option-info">
+                            <h6>Create Post</h6>
+                            <p>Post an existing product to the marketplace</p>
+                        </div>
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/captain-app.js"></script>
+</body>
+</html>

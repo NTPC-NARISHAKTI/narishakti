@@ -9,4 +9,5 @@ type Post struct {
 	Price       float64
 	TotalQty    int
 	TotalOrders int
+	Active      bool `gorm:"default:true"`
 }
