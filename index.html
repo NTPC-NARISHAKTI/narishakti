@@ -771,6 +771,14 @@
                         console.log('User role from server:', userRole);
                         
                         // Check if user is admin
+                        if (userRole === 'CAPTAIN') {
+                            console.log('User is CAPTAIN, redirecting to captain.html');
+                            localStorage.removeItem('authToken');
+                            localStorage.removeItem('currentUser');
+                            window.location.href = 'captain.html';
+                            return;
+                        }
+                        
                         if (userRole !== 'ADMIN') {
                             console.log('User is not admin, redirecting to user.html');
                             localStorage.removeItem('authToken');
@@ -817,7 +825,12 @@
                     localStorage.setItem('authToken', authToken);
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     
-                    // Role-based routing: Redirect non-admin users to user dashboard
+                    // Role-based routing: Redirect users based on their role
+                    if (currentUser.role === 'CAPTAIN') {
+                        window.location.href = 'captain.html';
+                        return;
+                    }
+                    
                     if (currentUser.role !== 'ADMIN') {
                         window.location.href = 'user.html';
                         return;

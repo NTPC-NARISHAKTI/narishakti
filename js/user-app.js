@@ -48,6 +48,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
                 
+                // Check if user is CAPTAIN - redirect to captain dashboard
+                if (userRole === 'CAPTAIN') {
+                    window.location.href = 'captain.html';
+                    return;
+                }
+                
                 showUserDashboard();
             } else {
                 throw new Error('Invalid response');
@@ -95,17 +101,20 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         if (response.ok && data.success && data.data && data.data.token) {
             authToken = data.data.token;
             currentUser = data.data.user || { name: 'User', role: 'USER' };
+            localStorage.setItem('authToken', authToken);
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
             
-            // Check if admin - redirect to admin dashboard
+            // Role-based routing: Redirect users based on their role
             if (currentUser.role === 'ADMIN') {
-                localStorage.setItem('authToken', authToken);
-                localStorage.setItem('currentUser', JSON.stringify(currentUser));
                 window.location.href = 'index.html';
                 return;
             }
             
-            localStorage.setItem('authToken', authToken);
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            if (currentUser.role === 'CAPTAIN') {
+                window.location.href = 'captain.html';
+                return;
+            }
+            
             showUserDashboard();
             showToast('Login successful!', 'success');
         } else {
