@@ -17,6 +17,7 @@ let projectId    = null;          // Captain's project — injected everywhere
 let allPosts     = [];
 let allOrders    = [];
 let allUsers     = [];
+let allProducts  = [];            // Products for captain's project
 let editingOrder = null;           // for order status modal
 
 // ──────────────────────────────────────────────────────────────
@@ -359,15 +360,17 @@ function avatarUrl(name, bg = '4f46e5') {
 // ──────────────────────────────────────────────────────────────
 async function loadAllData() {
     try {
-        const [postsRes, ordersRes, usersRes] = await Promise.all([
+        const [postsRes, ordersRes, usersRes, productsRes] = await Promise.all([
             apiRequest('/posts'),
             apiRequest('/orders'),
-            apiRequest('/users')
+            apiRequest('/users'),
+            apiRequest('/products')
         ]);
 
-        allPosts  = (postsRes.data  || []).filter(p => p.Product?.ProjectID === projectId);
-        allOrders = ordersRes.data  || [];
-        allUsers  = usersRes.data   || [];
+        allPosts    = (postsRes.data  || []).filter(p => p.Product?.ProjectID === projectId);
+        allOrders   = ordersRes.data  || [];
+        allUsers    = usersRes.data   || [];
+        allProducts = (productsRes.data || []).filter(p => p.ProjectID === projectId);
 
         updateStats();
         renderMarketplace(allPosts);
@@ -381,7 +384,9 @@ async function loadAllData() {
 }
 
 function updateStats() {
-    document.getElementById('totalProducts').textContent = allPosts.length;
+    // Fixed: Products now shows actual product count, Posts shows post count
+    document.getElementById('totalProducts').textContent = allProducts.length;
+    document.getElementById('totalPosts').textContent = allPosts.length;
 
     const projectPostIds = allPosts.map(p => p.ID);
     const projectOrders  = allOrders.filter(o => projectPostIds.includes(o.PostID));
@@ -409,44 +414,89 @@ function updateStats() {
 }
 
 // ──────────────────────────────────────────────────────────────
-//  MARKETPLACE (Posts)
+//  MARKETPLACE (Posts) - Instagram Style
 // ──────────────────────────────────────────────────────────────
 function renderMarketplace(posts) {
-    const grid  = document.getElementById('productsGrid');
-    const empty = document.getElementById('section-marketplace').querySelector('.empty-state');
+    const feed  = document.getElementById('instaFeed');
 
     if (!posts || posts.length === 0) {
-        grid.innerHTML  = '';
-        grid.appendChild(buildEmptyState('bi bi-box', 'No products yet', 'Add your first product to the marketplace', () => navigateTo('add-product', null)));
+        feed.innerHTML = '';
+        feed.appendChild(buildEmptyState('bi bi-shop', 'No posts yet', 'Create your first post to start selling in the marketplace', () => showAddPostModal()));
         return;
     }
 
-    grid.innerHTML = posts.map(post => `
-        <div class="product-card">
-            ${post.ProductImg
-                ? `<img src="${API_URL}/${post.ProductImg}" class="product-image" alt="${post.Product?.Name || 'Product'}" onerror="this.outerHTML='<div class=\\'product-image placeholder\\'><i class=\\'bi bi-box\\'></i></div>'">`
-                : `<div class="product-image placeholder"><i class="bi bi-box"></i></div>`
-            }
-            <div class="product-body">
-                <div class="product-name">${post.Product?.Name || '—'}</div>
-                <div class="product-desc">${post.Product?.Description || 'No description'}</div>
-                <div class="product-footer">
-                    <span class="product-price">₹${(post.Price || 0).toFixed(2)}</span>
-                    <span class="product-qty">${post.TotalQty - (post.TotalOrders || 0)} left</span>
+    feed.innerHTML = posts.map(post => {
+        const remainingQty = (post.TotalQty || 0) - (post.TotalOrders || 0);
+        const createdDate = new Date(post.CreatedAt).toLocaleDateString('en-IN', {
+            day: '2-digit', month: 'short', year: 'numeric'
+        });
+
+        return `
+            <div class="insta-card">
+                <div class="insta-card-header">
+                    <img src="${avatarUrl(post.Product?.Name || 'P', '4f46e5')}" class="insta-card-avatar" alt="">
+                    <div class="insta-card-user">
+                        <div class="insta-card-user-name">${post.Product?.Name || 'Unknown Product'}</div>
+                        <div class="insta-card-user-sub">Project #${post.Product?.ProjectID || '—'} · ${createdDate}</div>
+                    </div>
+                    <i class="bi bi-three-dots-vertical"></i>
+                </div>
+                ${post.ProductImg
+                    ? `<img src="${API_URL}/${post.ProductImg}" class="insta-card-image" alt="${post.Product?.Name || 'Product'}" onclick="viewProductDetails(${post.ID})">`
+                    : `<div class="insta-card-image-placeholder" onclick="viewProductDetails(${post.ID})"><i class="bi bi-image"></i></div>`
+                }
+                <div class="insta-card-actions">
+                    <i class="bi bi-heart" onclick="this.classList.toggle('active')"></i>
+                    <i class="bi bi-chat" onclick="viewProductDetails(${post.ID})"></i>
+                    <i class="bi bi-share" onclick="sharePost(${post.ID})"></i>
+                    <i class="bi bi-bookmark" onclick="this.classList.toggle('active')" style="margin-left: auto;"></i>
+                </div>
+                <div class="insta-card-body">
+                    <div class="insta-card-price">
+                        <span class="currency">₹</span>${(post.Price || 0).toFixed(2)}
+                    </div>
+                    <div class="insta-card-desc">
+                        ${post.Product?.Description || 'No description available for this product'}
+                    </div>
+                    <div class="insta-card-meta">
+                        <span><i class="bi bi-box"></i> ${remainingQty} available</span>
+                        <span><i class="bi bi-cart3"></i> ${post.TotalOrders || 0} sold</span>
+                    </div>
+                </div>
+                <div class="insta-card-footer">
+                    <button class="btn btn-outline-primary" onclick="viewProductDetails(${post.ID})">
+                        <i class="bi bi-info-circle"></i> View Details
+                    </button>
                 </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
-function filterProducts() {
+function filterMarketplace() {
     const term  = document.getElementById('searchProducts').value.toLowerCase().trim();
     if (!term) { renderMarketplace(allPosts); return; }
     const filtered = allPosts.filter(p =>
         (p.Product?.Name || '').toLowerCase().includes(term) ||
-        (p.Product?.Description || '').toLowerCase().includes(term)
+        (p.Product?.Description || '').toLowerCase().includes(term) ||
+        String(p.Price).includes(term)
     );
     renderMarketplace(filtered);
+}
+
+function sharePost(postId) {
+    const post = allPosts.find(p => p.ID === postId);
+    if (!post) return;
+    
+    if (navigator.share) {
+        navigator.share({
+            title: post.Product?.Name || 'Product',
+            text: `Check out this product: ${post.Product?.Name} for ₹${(post.Price || 0).toFixed(2)}`,
+            url: window.location.href
+        });
+    } else {
+        showToast('Share link copied!', 'success');
+    }
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -727,4 +777,216 @@ function buildEmptyState(iconClass, title, sub, onAction) {
         div.querySelector('button')?.addEventListener('click', onAction);
     }
     return div;
+}
+
+// ──────────────────────────────────────────────────────────────
+//  ADD POST MODAL - Load products for captain's project
+// ──────────────────────────────────────────────────────────────
+async function loadProjectProducts() {
+    const user = getUser();
+    const pid = user.ProjectID || user.projectId;
+    
+    console.log('[Products] Loading products for project:', pid);
+    
+    if (!pid) {
+        console.error('[Products] No project ID found for captain');
+        return [];
+    }
+
+    try {
+        const data = await apiRequest('/products');
+        const allProducts = data.data || [];
+        const pidNum = Number(pid);
+        
+        const filteredProducts = allProducts.filter(p => {
+            return Number(p.ProjectID) === pidNum;
+        });
+        
+        console.log('[Products] Found', filteredProducts.length, 'products for project', pidNum);
+        return filteredProducts;
+    } catch (err) {
+        console.error('[Products] Failed to load:', err);
+        showToast('Failed to load products', 'danger');
+        return [];
+    }
+}
+
+async function showAddPostModal() {
+    const modal = new bootstrap.Modal(document.getElementById('addPostModal'));
+    const productSelect = document.getElementById('postProductSelect');
+    const productInfo = document.getElementById('productSelectedInfo');
+
+    clearMessage('addPostMessage');
+    document.getElementById('postPrice').value = '';
+    document.getElementById('postQuantity').value = '';
+    document.getElementById('postImage').value = '';
+    productInfo.style.display = 'none';
+
+    productSelect.innerHTML = '<option value="">Loading products...</option>';
+
+    modal.show();
+
+    const products = await loadProjectProducts();
+
+    if (products.length === 0) {
+        productSelect.innerHTML = '<option value="">No products found for your project</option>';
+        showMessage('addPostMessage', 'No products available. Please ask admin to add products for your project.', 'warning');
+        return;
+    }
+
+    productSelect.innerHTML = '<option value="">Select a product...</option>' +
+        products.map(p => `<option value="${p.ID}" data-desc="${p.Description || ''}">${p.Name}</option>`).join('');
+}
+
+// ──────────────────────────────────────────────────────────────
+//  ADD OPTIONS MODAL
+// ──────────────────────────────────────────────────────────────
+function showAddOptionsModal() {
+    const modal = new bootstrap.Modal(document.getElementById('addOptionsModal'));
+    modal.show();
+}
+
+// ──────────────────────────────────────────────────────────────
+//  ADD PRODUCT MODAL
+// ──────────────────────────────────────────────────────────────
+function openAddProductModal() {
+    bootstrap.Modal.getInstance(document.getElementById('addOptionsModal'))?.hide();
+    
+    const modal = new bootstrap.Modal(document.getElementById('addProductModal'));
+    clearMessage('addProductMessage');
+    document.getElementById('productName').value = '';
+    document.getElementById('productDescription').value = '';
+    document.getElementById('productImageFile').value = '';
+    modal.show();
+}
+
+async function submitAddProduct() {
+    const name = document.getElementById('productName').value.trim();
+    const description = document.getElementById('productDescription').value.trim();
+    const imageFile = document.getElementById('productImageFile').files[0];
+
+    if (!name) {
+        showMessage('addProductMessage', 'Please enter a product name', 'danger');
+        return;
+    }
+
+    const submitBtn = document.getElementById('submitProductBtn');
+    const spinner = document.getElementById('submitProductSpinner');
+
+    submitBtn.disabled = true;
+    spinner.style.display = 'inline-block';
+
+    try {
+        const payload = {
+            Name: name,
+            Description: description || '',
+            ProjectID: projectId
+        };
+
+        console.log('[Product] Creating with payload:', payload);
+
+        const result = await apiRequest('/products', 'POST', payload);
+
+        if (result.success) {
+            bootstrap.Modal.getInstance(document.getElementById('addProductModal')).hide();
+            showToast('Product created successfully!', 'success');
+            await loadAllData();
+        } else {
+            throw new Error(result.error || 'Failed to create product');
+        }
+    } catch (err) {
+        showMessage('addProductMessage', err.message, 'danger');
+    } finally {
+        submitBtn.disabled = false;
+        spinner.style.display = 'none';
+    }
+}
+
+document.getElementById('postProductSelect').addEventListener('change', function() {
+    const productInfo = document.getElementById('productSelectedInfo');
+    const selectedOption = this.options[this.selectedIndex];
+    
+    if (this.value) {
+        document.getElementById('selectedProductDesc').textContent = selectedOption.dataset.desc || 'No description available';
+        productInfo.style.display = 'block';
+    } else {
+        productInfo.style.display = 'none';
+    }
+});
+
+async function submitAddPost() {
+    const productId = document.getElementById('postProductSelect').value;
+    const price = parseFloat(document.getElementById('postPrice').value);
+    const quantity = parseInt(document.getElementById('postQuantity').value, 10);
+    const imageFile = document.getElementById('postImage').files[0];
+
+    if (!productId) {
+        showMessage('addPostMessage', 'Please select a product', 'danger');
+        return;
+    }
+
+    if (!price || price <= 0) {
+        showMessage('addPostMessage', 'Please enter a valid price', 'danger');
+        return;
+    }
+
+    if (!quantity || quantity <= 0) {
+        showMessage('addPostMessage', 'Please enter a valid quantity', 'danger');
+        return;
+    }
+
+    const submitBtn = document.getElementById('submitPostBtn');
+    const spinner = document.getElementById('submitPostSpinner');
+
+    submitBtn.disabled = true;
+    spinner.style.display = 'inline-block';
+
+    try {
+        const formData = new FormData();
+        formData.append('ProductID', parseInt(productId));
+        formData.append('Price', price);
+        formData.append('TotalQty', quantity);
+        if (imageFile) {
+            formData.append('ProductImg', imageFile);
+        }
+
+        const result = await apiUpload('/posts', formData);
+
+        if (result.success) {
+            bootstrap.Modal.getInstance(document.getElementById('addPostModal')).hide();
+            showToast('Post created successfully!', 'success');
+            await loadAllData();
+        } else {
+            throw new Error(result.error || 'Failed to create post');
+        }
+    } catch (err) {
+        showMessage('addPostMessage', err.message, 'danger');
+    } finally {
+        submitBtn.disabled = false;
+        spinner.style.display = 'none';
+    }
+}
+
+function viewProductDetails(postId) {
+    const post = allPosts.find(p => p.ID === postId);
+    if (!post) return;
+
+    document.getElementById('productDetailTitle').textContent = post.Product?.Name || 'Product Details';
+    
+    if (post.ProductImg) {
+        document.getElementById('productDetailImage').innerHTML = 
+            `<img src="${API_URL}/${post.ProductImg}" class="rounded" style="max-width: 100%; max-height: 200px;">`;
+    } else {
+        document.getElementById('productDetailImage').innerHTML = 
+            `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 150px;">
+                <i class="bi bi-box" style="font-size: 48px; color: #ccc;"></i>
+            </div>`;
+    }
+
+    document.getElementById('productDetailPrice').textContent = `₹${(post.Price || 0).toFixed(2)}`;
+    document.getElementById('productDetailQty').textContent = `${post.TotalQty - (post.TotalOrders || 0)} left`;
+    document.getElementById('productDetailDesc').textContent = post.Product?.Description || 'No description available';
+
+    const modal = new bootstrap.Modal(document.getElementById('productDetailModal'));
+    modal.show();
 }

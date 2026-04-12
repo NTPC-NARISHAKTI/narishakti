@@ -110,23 +110,31 @@ body {
     position: fixed;
     top: var(--header-h);
     left: 0; right: 0;
-    height: var(--stats-h);
+    height: auto;
+    min-height: var(--stats-h);
     background: var(--surface);
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
     justify-content: space-around;
-    padding: 0 8px;
+    padding: 8px 4px;
     z-index: 99;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 
 .stat-card {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
+    gap: 6px;
+    padding: 6px 8px;
     flex: 1;
+    min-width: 70px;
     justify-content: center;
+}
+
+.stat-card .stat-icon {
+    font-size: 16px;
 }
 
 .stat-icon {
@@ -156,10 +164,10 @@ body {
 
 /* ── Main Content ── */
 .main-content {
-    margin-top: calc(var(--header-h) + var(--stats-h));
+    margin-top: calc(var(--header-h) + 65px);
     margin-bottom: calc(var(--nav-h) + var(--safe-bottom) + 8px);
     padding: 16px;
-    min-height: calc(100dvh - var(--header-h) - var(--stats-h) - var(--nav-h));
+    min-height: calc(100dvh - var(--header-h) - 65px - var(--nav-h));
 }
 
 .content-section {
@@ -630,5 +638,343 @@ body {
         transform: translateX(-50%);
         max-width: 900px;
         border-radius: 0 0 var(--radius) var(--radius);
+    }
+}
+
+/* ── Modal Styling ── */
+.modal-content {
+    border: none;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+}
+
+.modal-header {
+    background: var(--primary);
+    color: white;
+    border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.modal-header .btn-close {
+    filter: brightness(0) invert(1);
+}
+
+.modal-header .modal-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ── Product Card Hover ── */
+.product-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.product-card:active {
+    transform: scale(0.98);
+}
+
+/* ── Form in Modal ── */
+#addPostMessage .alert,
+#addProductMessage .alert {
+    font-size: 13px;
+    padding: 8px 12px;
+}
+
+/* ── Product Selected Info Box ── */
+#productSelectedInfo {
+    font-size: 12px;
+    border-left: 3px solid var(--primary);
+}
+
+/* ── Stats Enhancement ── */
+.stat-card .stat-value {
+    transition: transform 0.2s;
+}
+
+.stat-card:hover .stat-value {
+    transform: scale(1.05);
+}
+
+/* ── Info Box in Modal ── */
+.info-box {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-top: 10px;
+}
+
+.info-box i {
+    color: #0284c7;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.info-box p {
+    margin: 0;
+    font-size: 12px;
+    color: #0369a1;
+}
+
+/* ── Add Options Modal ── */
+.add-option-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    background: var(--surface);
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid var(--border);
+}
+
+.add-option-card:hover {
+    background: var(--bg);
+    transform: translateX(4px);
+}
+
+.add-option-card:last-child {
+    margin-bottom: 0;
+}
+
+.add-option-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.add-option-icon i {
+    font-size: 22px;
+}
+
+.add-option-info {
+    flex: 1;
+}
+
+.add-option-info h6 {
+    margin: 0 0 2px 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.add-option-info p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.add-option-card .bi-chevron-right {
+    color: var(--text-muted);
+    font-size: 18px;
+}
+
+/* ── Instagram-style Feed ── */
+.insta-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-bottom: 20px;
+}
+
+/* ── Instagram Post Card ── */
+.insta-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.insta-card-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 14px;
+    gap: 10px;
+}
+
+.insta-card-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--bg);
+}
+
+.insta-card-user {
+    flex: 1;
+}
+
+.insta-card-user-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.insta-card-user-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.insta-card-image {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    background: var(--bg);
+    display: block;
+}
+
+.insta-card-image-placeholder {
+    width: 100%;
+    aspect-ratio: 1;
+    background: linear-gradient(135deg, var(--bg) 0%, #e2e8f0 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.insta-card-image-placeholder i {
+    font-size: 48px;
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+.insta-card-actions {
+    padding: 10px 14px;
+    display: flex;
+    gap: 12px;
+}
+
+.insta-card-actions i {
+    font-size: 22px;
+    cursor: pointer;
+    color: var(--text);
+    transition: color 0.2s;
+}
+
+.insta-card-actions i:hover {
+    color: var(--primary);
+}
+
+.insta-card-actions i.active {
+    color: var(--danger);
+}
+
+.insta-card-body {
+    padding: 0 14px 12px;
+}
+
+.insta-card-price {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.insta-card-price .currency {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.insta-card-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.insta-card-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    gap: 12px;
+}
+
+.insta-card-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.insta-card-footer {
+    padding: 8px 14px;
+    border-top: 1px solid var(--border);
+}
+
+.insta-card-footer button {
+    width: 100%;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* ── Instagram Skeleton ── */
+.insta-skeleton-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.insta-skeleton-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.insta-skeleton-header {
+    height: 60px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+.insta-skeleton-image {
+    width: 100%;
+    aspect-ratio: 1;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+.insta-skeleton-body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.insta-skeleton-line {
+    height: 12px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+.insta-skeleton-line.short {
+    width: 40%;
+}
+
+.insta-skeleton-line.medium {
+    width: 70%;
+}
+
+/* ── Desktop Responsive ── */
+@media (min-width: 600px) {
+    .insta-feed {
+        max-width: 470px;
+        margin: 0 auto;
     }
 }
