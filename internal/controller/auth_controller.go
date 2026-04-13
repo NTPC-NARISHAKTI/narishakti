@@ -55,6 +55,11 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	projectName := ""
+	if user.Project.Name != "" {
+		projectName = user.Project.Name
+	}
+
 	c.JSON(http.StatusOK, utils.SuccessResponse("Login successful", gin.H{
 		"token": token,
 		"user": gin.H{
@@ -64,6 +69,7 @@ func Login(c *gin.Context) {
 			"empNo":          user.EmpNo,
 			"role":           user.Role,
 			"projectId":      user.ProjectID,
+			"projectName":    projectName,
 			"approvalStatus": user.ApprovalStatus,
 		},
 	}))
@@ -82,6 +88,11 @@ func GetCurrentUser(c *gin.Context) {
 		return
 	}
 
+	projectName := ""
+	if user.Project.Name != "" {
+		projectName = user.Project.Name
+	}
+
 	c.JSON(http.StatusOK, utils.SuccessResponse("User info retrieved", gin.H{
 		"id":             user.ID,
 		"name":           user.Name,
@@ -89,6 +100,7 @@ func GetCurrentUser(c *gin.Context) {
 		"empNo":          user.EmpNo,
 		"role":           user.Role,
 		"projectId":      user.ProjectID,
+		"projectName":    projectName,
 		"approvalStatus": user.ApprovalStatus,
 	}))
 }

@@ -107,11 +107,16 @@ async function apiRequest(url, method = 'GET', body = null) {
         throw new Error('Session expired — please login again');
     }
 
+    if (res.status === 403) {
+        const data = await res.json();
+        throw new Error((data && (data.error || data.message)) || 'Permission denied');
+    }
+
     const data = await res.json();
     console.log(`[API] Response:`, data);
 
     if (!res.ok) {
-        throw new Error((data && data.error) || `HTTP ${res.status}`);
+        throw new Error((data && (data.error || data.message)) || `HTTP ${res.status}`);
     }
 
     return data;
@@ -184,6 +189,7 @@ async function verifyAndRoute() {
             role:           me.role,
             ProjectID:      me.projectId,  // backend returns lowercase projectId
             projectId:      me.projectId,
+            projectName:    me.projectName,
             approvalStatus:  me.approvalStatus,
         };
 
@@ -192,6 +198,11 @@ async function verifyAndRoute() {
         if (currentUser.role === 'ADMIN') {
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
             window.location.href = 'index.html';
+            return;
+        }
+        if (currentUser.role === 'DIRECTOR') {
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            window.location.href = 'director.html';
             return;
         }
         if (currentUser.role === 'USER') {
@@ -256,6 +267,12 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
             window.location.href = 'index.html';
             return;
         }
+        if (normalizedUser.role === 'DIRECTOR') {
+            localStorage.setItem('authToken', token);
+            localStorage.setItem('currentUser', JSON.stringify(normalizedUser));
+            window.location.href = 'director.html';
+            return;
+        }
         if (normalizedUser.role === 'USER') {
             localStorage.setItem('authToken', token);
             localStorage.setItem('currentUser', JSON.stringify(normalizedUser));
@@ -272,6 +289,27 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
         localStorage.setItem('authToken', authToken);
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+        // Fetch full user data including projectName
+        try {
+            const meData = await fetch(`${API_URL}/me`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            }).then(r => r.json());
+            
+            if (meData.success && meData.data) {
+                currentUser = {
+                    ...currentUser,
+                    projectName: meData.data.projectName,
+                };
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            }
+        } catch (e) {
+            console.error('[Login] Failed to fetch user details:', e);
+        }
 
         showDashboard();
         loadAllData();
@@ -316,7 +354,28 @@ function showDashboard() {
     document.getElementById('captainDashboard').style.display = 'block';
 
     const pid = getProjectId();
-    document.getElementById('projectBadge').textContent = pid ? `Project #${pid}` : 'No Project';
+    
+    if (currentUser.projectName) {
+        document.getElementById('projectBadge').textContent = currentUser.projectName;
+    } else if (pid) {
+        loadProjectName(pid);
+    } else {
+        document.getElementById('projectBadge').textContent = 'No Project';
+    }
+}
+
+async function loadProjectName(projectId) {
+    try {
+        const data = await apiRequest(`/projects/${projectId}`);
+        if (data.success && data.data) {
+            document.getElementById('projectBadge').textContent = data.data.Name || `Project #${projectId}`;
+            currentUser.projectName = data.data.Name;
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        }
+    } catch (err) {
+        console.error('[LoadProject] Failed:', err);
+        document.getElementById('projectBadge').textContent = `Project #${projectId}`;
+    }
 }
 
 function navigateTo(section, event) {
@@ -379,6 +438,11 @@ async function loadAllData() {
         renderApprovals();
         renderOrders();
 
+        // Start sliding activities
+        setTimeout(() => {
+            startSlidingActivities();
+        }, 500);
+
     } catch (err) {
         console.error('[LoadData] Failed:', err);
         showToast('Failed to load data: ' + err.message, 'danger');
@@ -432,6 +496,10 @@ function renderMarketplace(posts) {
         const createdDate = new Date(post.CreatedAt).toLocaleDateString('en-IN', {
             day: '2-digit', month: 'short', year: 'numeric'
         });
+        const postOrders = getPostRecentOrders(post.ID);
+        const initialText = postOrders.length > 0 
+            ? `<span class="ticker-text"><strong>${postOrders[0].User?.Name || 'Someone'}</strong> just ordered ${postOrders[0].OrderQuantity}x</span>`
+            : `<span class="ticker-text" style="color: var(--text-muted);">No recent orders</span>`;
 
         return `
             <div class="insta-card">
@@ -446,6 +514,12 @@ function renderMarketplace(posts) {
                     ? `<img src="${API_URL}/${post.ProductImg}" class="insta-card-image" alt="${post.Product?.Name || 'Product'}" onclick="viewProductDetails(${post.ID})">`
                     : `<div class="insta-card-image-placeholder" onclick="viewProductDetails(${post.ID})"><i class="bi bi-image"></i></div>`
                 }
+                <div class="product-activity-ticker" id="ticker-${post.ID}">
+                    <div class="ticker-content active">
+                        <i class="bi bi-lightning-fill ticker-icon"></i>
+                        ${initialText}
+                    </div>
+                </div>
                 <div class="insta-card-actions">
                     <i class="bi bi-heart" onclick="this.classList.toggle('active')"></i>
                     <i class="bi bi-chat" onclick="viewProductDetails(${post.ID})"></i>
@@ -471,6 +545,53 @@ function renderMarketplace(posts) {
             </div>
         `;
     }).join('');
+}
+
+function getPostRecentOrders(postId) {
+    if (!allOrders || allOrders.length === 0) return [];
+    
+    const postOrders = allOrders.filter(order => order.PostID === postId)
+        .sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt));
+    
+    return postOrders.slice(0, 5);
+}
+
+function startSlidingActivities() {
+    const tickers = document.querySelectorAll('.product-activity-ticker');
+    
+    tickers.forEach(ticker => {
+        const postId = parseInt(ticker.id.replace('ticker-', ''));
+        const postOrders = getPostRecentOrders(postId);
+        
+        if (postOrders.length <= 1) return;
+        
+        let currentIndex = 0;
+        
+        setInterval(() => {
+            const contents = ticker.querySelectorAll('.ticker-content');
+            const nextIndex = (currentIndex + 1) % postOrders.length;
+            
+            const currentEl = contents[0];
+            const nextEl = document.createElement('div');
+            nextEl.className = 'ticker-content';
+            nextEl.innerHTML = `
+                <i class="bi bi-lightning-fill ticker-icon"></i>
+                <span class="ticker-text"><strong>${postOrders[nextIndex].User?.Name || 'Someone'}</strong> just ordered ${postOrders[nextIndex].OrderQuantity}x</span>
+            `;
+            ticker.appendChild(nextEl);
+            
+            setTimeout(() => {
+                currentEl.classList.remove('active');
+                currentEl.classList.add('slide-out');
+                nextEl.classList.add('active');
+            }, 50);
+            
+            setTimeout(() => {
+                currentEl.remove();
+                currentIndex = nextIndex;
+            }, 500);
+        }, 4000);
+    });
 }
 
 function filterMarketplace() {
@@ -671,9 +792,15 @@ function renderApprovals() {
     const list  = document.getElementById('approvalsList');
     const empty = document.getElementById('approvalsEmpty');
 
-    const pending = allUsers.filter(u =>
-        u.ProjectID === projectId && u.ApprovalStatus === 'PENDING'
-    );
+    console.log('[Approvals] Filtering users. ProjectID:', projectId, 'All users:', allUsers);
+
+    // Filter users by project ID and pending status
+    const pending = allUsers.filter(u => {
+        const userProjectId = u.ProjectID || u.projectId;
+        const matches = userProjectId == projectId && u.ApprovalStatus === 'PENDING';
+        console.log('[Approvals] User:', u.Name, 'ProjectID:', userProjectId, 'Status:', u.ApprovalStatus, 'Matches:', matches);
+        return matches;
+    });
 
     if (!pending.length) {
         list.style.display = 'none';
@@ -705,21 +832,21 @@ function renderApprovals() {
 
 async function doApprove(userId) {
     try {
-        await apiRequest(`/admin/users/${userId}/approve`, 'PATCH');
+        await apiRequest(`/captain/users/${userId}/approve`, 'PATCH');
         showToast('User approved', 'success');
         await loadAllData();
     } catch (err) {
-        showToast('Approve failed: ' + err.message, 'danger');
+        showToast('Approve failed: ' + (err.message || 'Permission denied'), 'danger');
     }
 }
 
 async function doReject(userId) {
     try {
-        await apiRequest(`/admin/users/${userId}/reject`, 'PATCH');
+        await apiRequest(`/captain/users/${userId}/reject`, 'PATCH');
         showToast('User rejected', 'success');
         await loadAllData();
     } catch (err) {
-        showToast('Reject failed: ' + err.message, 'danger');
+        showToast('Reject failed: ' + (err.message || 'Permission denied'), 'danger');
     }
 }
 

@@ -39,6 +39,12 @@ func SetupRoutes(r *gin.Engine) {
 	admin.PATCH("/users/:id/approve", controllers.ApproveUser)
 	admin.PATCH("/users/:id/reject", controllers.RejectUser)
 
+	// Captain user approval routes
+	captain := auth.Group("/captain")
+	captain.Use(middleware.RoleMiddleware("CAPTAIN"))
+	captain.PATCH("/users/:id/approve", controllers.CaptainApproveUser)
+	captain.PATCH("/users/:id/reject", controllers.CaptainRejectUser)
+
 	// Inventory routes
 	auth.POST("/inventories", controllers.CreateInventory)
 	auth.GET("/inventories", controllers.GetInventories)

@@ -38,13 +38,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (data.success && data.data) {
                 const userRole = data.data.role;
                 
-                // Update stored user with verified role
-                currentUser = { ...currentUser, role: userRole };
+                // Update stored user with all user data including projectName
+                currentUser = { 
+                    ...currentUser, 
+                    role: userRole,
+                    projectName: data.data.projectName,
+                    ProjectID: data.data.projectId,
+                    id: data.data.id,
+                    name: data.data.name,
+                    email: data.data.email
+                };
                 localStorage.setItem('currentUser', JSON.stringify(currentUser));
                 
                 // Check if user is admin - redirect to admin dashboard
                 if (userRole === 'ADMIN') {
                     window.location.href = 'index.html';
+                    return;
+                }
+                
+                // Check if user is DIRECTOR - redirect to director dashboard
+                if (userRole === 'DIRECTOR') {
+                    window.location.href = 'director.html';
                     return;
                 }
                 
@@ -82,7 +96,29 @@ function showUserDashboard() {
     document.getElementById('authContainer').style.display = 'none';
     document.getElementById('userDashboard').style.display = 'block';
     document.getElementById('userInfo').textContent = `Welcome, ${currentUser.name || 'User'}`;
+    
+    if (currentUser.projectName) {
+        const projectBadge = document.getElementById('userProject');
+        projectBadge.textContent = currentUser.projectName;
+        projectBadge.style.display = 'inline-block';
+    } else if (currentUser.ProjectID) {
+        loadProjectName(currentUser.ProjectID);
+    }
+    
     loadMarketplace();
+}
+
+async function loadProjectName(projectId) {
+    try {
+        const data = await apiCall(`/projects/${projectId}`);
+        if (data.success && data.data) {
+            const projectBadge = document.getElementById('userProject');
+            projectBadge.textContent = data.data.Name || `Project #${projectId}`;
+            projectBadge.style.display = 'inline-block';
+        }
+    } catch (error) {
+        console.error('Error loading project:', error);
+    }
 }
 
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -110,15 +146,43 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
                 return;
             }
             
+            if (currentUser.role === 'DIRECTOR') {
+                window.location.href = 'director.html';
+                return;
+            }
+            
             if (currentUser.role === 'CAPTAIN') {
                 window.location.href = 'captain.html';
                 return;
             }
             
+            // Fetch full user data including projectName for USER role
+            try {
+                const meData = await fetch(`${API_URL}/me`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                }).then(r => r.json());
+                
+                if (meData.success && meData.data) {
+                    currentUser = {
+                        ...currentUser,
+                        projectName: meData.data.projectName,
+                    };
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                }
+            } catch (e) {
+                console.error('[Login] Failed to fetch user details:', e);
+            }
+            
             showUserDashboard();
             showToast('Login successful!', 'success');
         } else {
-            showMessage('authMessage', 'Login failed: ' + (data.error || data.message || 'Invalid credentials'), 'danger');
+            // Show the error message from backend
+            const errorMsg = data.error || data.message || 'Invalid credentials';
+            showMessage('authMessage', errorMsg, 'danger');
         }
     } catch (error) {
         console.error('Login error:', error);
@@ -134,6 +198,11 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
     const password = document.getElementById('registerPassword').value;
     const confirmPassword = document.getElementById('registerConfirmPassword').value;
     const projectId = document.getElementById('registerProject').value;
+
+    if (password.length < 6) {
+        showMessage('authMessage', 'Password must be at least 6 characters.', 'danger');
+        return;
+    }
 
     if (password !== confirmPassword) {
         showMessage('authMessage', 'Password and confirm password do not match.', 'danger');
