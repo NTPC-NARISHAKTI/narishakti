@@ -377,6 +377,7 @@
                                 <select class="form-control" id="userRole" required>
                                     <option value="USER" selected>USER</option>
                                     <option value="CAPTAIN">CAPTAIN</option>
+                                    <option value="DIRECTOR">DIRECTOR</option>
                                     <option value="ADMIN">ADMIN</option>
                                 </select>
                             </div>
@@ -771,6 +772,14 @@
                         console.log('User role from server:', userRole);
                         
                         // Check if user is admin
+                        if (userRole === 'DIRECTOR') {
+                            console.log('User is DIRECTOR, redirecting to director.html');
+                            localStorage.removeItem('authToken');
+                            localStorage.removeItem('currentUser');
+                            window.location.href = 'director.html';
+                            return;
+                        }
+                        
                         if (userRole === 'CAPTAIN') {
                             console.log('User is CAPTAIN, redirecting to captain.html');
                             localStorage.removeItem('authToken');
@@ -826,6 +835,11 @@
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     
                     // Role-based routing: Redirect users based on their role
+                    if (currentUser.role === 'DIRECTOR') {
+                        window.location.href = 'director.html';
+                        return;
+                    }
+                    
                     if (currentUser.role === 'CAPTAIN') {
                         window.location.href = 'captain.html';
                         return;
@@ -991,6 +1005,12 @@
                 logout();
                 throw new Error('Unauthorized');
             }
+            
+            // Handle 204 No Content responses
+            if (response.status === 204) {
+                return { success: true, data: null };
+            }
+            
             const data = await response.json();
             console.log('Response data:', data);
             return data;
@@ -1112,8 +1132,11 @@
                 Role: roleValue
             };
             
-            if (projectID) {
-                user.ProjectID = parseInt(projectID);
+            const projectIdNum = parseInt(projectID);
+            if (projectID && !isNaN(projectIdNum) && projectIdNum > 0) {
+                user.ProjectID = projectIdNum;
+            } else {
+                user.ProjectID = null;
             }
             
             console.log('Final user object:', user);

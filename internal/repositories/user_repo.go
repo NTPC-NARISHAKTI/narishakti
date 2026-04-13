@@ -22,7 +22,7 @@ func GetUserByID(id string) (models.User, error) {
 }
 
 func UpdateUser(user *models.User) error {
-	return database.DB.Save(user).Error
+	return database.DB.Model(user).Select("emp_no", "name", "phone_no", "project_id", "email", "password_hash", "role", "approval_status", "updated_at", "updated_by").Save(user).Error
 }
 
 func DeleteUser(user *models.User) error {

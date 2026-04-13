@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 
 	"marketplace/internal/models"
@@ -87,10 +88,54 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	// Bind incoming JSON to existing User
-	if err := c.ShouldBindJSON(&User); err != nil {
+	// Parse JSON into a map to manually handle fields
+	var jsonData map[string]interface{}
+	if err := c.ShouldBindJSON(&jsonData); err != nil {
 		c.JSON(http.StatusBadRequest, utils.ErrorResponse("Invalid input", err.Error()))
 		return
+	}
+
+	// Update User fields from JSON
+	if val, ok := jsonData["EmpNo"]; ok {
+		User.EmpNo = val.(string)
+	}
+	if val, ok := jsonData["Name"]; ok {
+		User.Name = val.(string)
+	}
+	if val, ok := jsonData["Email"]; ok {
+		User.Email = val.(string)
+	}
+	if val, ok := jsonData["PhoneNo"]; ok {
+		if str, ok := val.(string); ok {
+			User.PhoneNo = str
+		}
+	}
+	if val, ok := jsonData["Role"]; ok {
+		User.Role = val.(string)
+	}
+	if val, ok := jsonData["Password"]; ok {
+		if str, ok := val.(string); ok {
+			// Hash the password before saving
+			hashed, hashErr := utils.HashPassword(str)
+			if hashErr != nil {
+				c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to hash password", hashErr.Error()))
+				return
+			}
+			User.PasswordHash = hashed
+		}
+	}
+	if val, ok := jsonData["ProjectID"]; ok {
+		// Handle nil/null values
+		if val == nil {
+			User.ProjectID = nil
+		} else if num, ok := val.(float64); ok {
+			if num > 0 {
+				projectID := uint(num)
+				User.ProjectID = &projectID
+			} else {
+				User.ProjectID = nil
+			}
+		}
 	}
 
 	userID, exists := c.Get("user_id")
@@ -106,7 +151,9 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, utils.SuccessResponse("User updated successfully", User))
+	// Fetch the updated user with Project preloaded
+	updatedUser, _ := services.GetUser(id)
+	c.JSON(http.StatusOK, utils.SuccessResponse("User updated successfully", updatedUser))
 }
 
 func DeleteUser(c *gin.Context) {
@@ -158,6 +205,76 @@ func RejectUser(c *gin.Context) {
 		return
 	}
 	rejectedBy := uint(userID.(float64))
+
+	if err := services.RejectUser(id, rejectedBy); err != nil {
+		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to reject user", err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, utils.SuccessResponse("User rejected successfully", nil))
+}
+
+func CaptainApproveUser(c *gin.Context) {
+	id := c.Param("id")
+
+	userToApprove, err := services.GetUser(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, utils.ErrorResponse("User not found", "User not found"))
+		return
+	}
+
+	captainUserID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "User not found in context"))
+		return
+	}
+
+	captain, err := services.GetUser(fmt.Sprintf("%v", captainUserID))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "Captain not found"))
+		return
+	}
+
+	if captain.ProjectID == nil || userToApprove.ProjectID == nil || *captain.ProjectID != *userToApprove.ProjectID {
+		c.JSON(http.StatusForbidden, utils.ErrorResponse("Forbidden", "You can only approve users in your project"))
+		return
+	}
+
+	approvedBy := uint(captainUserID.(float64))
+
+	if err := services.ApproveUser(id, approvedBy); err != nil {
+		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to approve user", err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, utils.SuccessResponse("User approved successfully", nil))
+}
+
+func CaptainRejectUser(c *gin.Context) {
+	id := c.Param("id")
+
+	userToReject, err := services.GetUser(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, utils.ErrorResponse("User not found", "User not found"))
+		return
+	}
+
+	captainUserID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "User not found in context"))
+		return
+	}
+
+	captain, err := services.GetUser(fmt.Sprintf("%v", captainUserID))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "Captain not found"))
+		return
+	}
+
+	if captain.ProjectID == nil || userToReject.ProjectID == nil || *captain.ProjectID != *userToReject.ProjectID {
+		c.JSON(http.StatusForbidden, utils.ErrorResponse("Forbidden", "You can only reject users in your project"))
+		return
+	}
+
+	rejectedBy := uint(captainUserID.(float64))
 
 	if err := services.RejectUser(id, rejectedBy); err != nil {
 		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to reject user", err.Error()))

@@ -1,6 +1,8 @@
 package services
 
 import (
+	"fmt"
+
 	"marketplace/internal/models"
 	"marketplace/internal/repositories"
 	"marketplace/internal/utils"
@@ -30,6 +32,13 @@ func UpdateUser(User *models.User, updatedBy uint) error {
 	if err != nil {
 		return err
 	}
+
+	// Reload the user with Project to return updated data
+	updatedUser, err := repositories.GetUserByID(fmt.Sprintf("%d", User.ID))
+	if err != nil {
+		return err
+	}
+	*User = updatedUser
 
 	LogActivity("UPDATED", "USER", User.ID, updatedBy, "User details updated")
 	return nil

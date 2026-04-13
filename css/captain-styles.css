@@ -978,3 +978,51 @@ body {
         margin: 0 auto;
     }
 }
+
+/* ── Sliding Activity Ticker ── */
+.product-activity-ticker {
+    position: relative;
+    height: 32px;
+    overflow: hidden;
+    background: linear-gradient(90deg, rgba(39, 174, 96, 0.1) 0%, rgba(39, 174, 96, 0.05) 100%);
+    border-top: 1px solid var(--border);
+}
+
+.product-activity-ticker .ticker-content {
+    position: absolute;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    height: 100%;
+    font-size: 11px;
+    color: var(--success);
+    opacity: 0;
+    transform: translateY(100%);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.product-activity-ticker .ticker-content.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.product-activity-ticker .ticker-content.slide-out {
+    opacity: 0;
+    transform: translateY(-100%);
+}
+
+.product-activity-ticker .ticker-icon {
+    margin-right: 6px;
+    font-size: 14px;
+}
+
+.product-activity-ticker .ticker-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.product-activity-ticker .ticker-text strong {
+    font-weight: 600;
+}
