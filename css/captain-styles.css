@@ -1026,3 +1026,113 @@ body {
 .product-activity-ticker .ticker-text strong {
     font-weight: 600;
 }
+
+/* ── Members Section ── */
+.members-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.member-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.member-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.member-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.member-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.member-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.member-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.member-meta span {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.member-badge {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 20px;
+}
+
+.member-status {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.member-status.approved { background: var(--success); }
+.member-status.pending { background: var(--warning); }
+.member-status.rejected { background: var(--danger); }
+
+/* ── Filter Row ── */
+.filter-row {
+    margin-bottom: 14px;
+}
+
+.filter-row .form-select {
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+}
+
+/* ── Mobile Bottom Nav Enhancement ── */
+@media (max-width: 480px) {
+    .bottom-nav {
+        flex-wrap: nowrap;
+        justify-content: space-between;
+    }
+    
+    .nav-item {
+        padding: 6px 4px;
+        flex: 1;
+    }
+    
+    .nav-item span {
+        font-size: 9px;
+    }
+    
+    .nav-item i {
+        font-size: 18px;
+    }
+}
