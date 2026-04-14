@@ -619,10 +619,25 @@ async function submitOrder() {
     const postId = parseInt(document.getElementById('orderPostId').value);
     const quantity = parseInt(document.getElementById('orderQuantity').value);
     
+    // Get current user from localStorage
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    const userId = currentUser.id;
+    
+    if (!userId) {
+        showToast('User not found. Please login again.', 'danger');
+        return;
+    }
+    
+    // Calculate total price
+    const totalPrice = (currentPost?.Price || 0) * quantity;
+    
     try {
         const data = await apiCall('/orders', 'POST', {
             PostID: postId,
-            OrderQuantity: quantity
+            UserID: userId,
+            OrderQuantity: quantity,
+            TotalPrice: totalPrice,
+            OrderStatus: 'PENDING'
         });
         
         if (data.success) {

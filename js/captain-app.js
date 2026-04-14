@@ -386,6 +386,13 @@ function navigateTo(section, event) {
 
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     event && event.target.closest('.nav-item').classList.add('active');
+
+    if (section === 'members') {
+        const projectMembers = allUsers.filter(u => 
+            u.ProjectID === projectId && u.ApprovalStatus === 'APPROVED'
+        );
+        renderMembers(projectMembers);
+    }
 }
 
 function showMessage(elId, text, type = 'info') {
@@ -848,6 +855,111 @@ async function doReject(userId) {
     } catch (err) {
         showToast('Reject failed: ' + (err.message || 'Permission denied'), 'danger');
     }
+}
+
+// ──────────────────────────────────────────────────────────────
+//  MEMBERS SECTION
+// ──────────────────────────────────────────────────────────────
+function renderMembers(members) {
+    const list = document.getElementById('membersList');
+    const empty = document.getElementById('membersEmpty');
+    const countBadge = document.getElementById('membersCountBadge');
+    
+    if (!members || members.length === 0) {
+        list.innerHTML = '';
+        empty.style.display = 'flex';
+        countBadge.style.display = 'none';
+        return;
+    }
+    
+    empty.style.display = 'none';
+    countBadge.style.display = 'inline';
+    countBadge.textContent = members.length;
+    
+    list.style.display = 'flex';
+    
+    list.innerHTML = members.map(member => {
+        const statusClass = member.ApprovalStatus === 'APPROVED' ? 'approved' : 
+                           member.ApprovalStatus === 'PENDING' ? 'pending' : 'rejected';
+        const roleBadgeClass = getRoleBadgeClass(member.Role);
+        
+        return `
+            <div class="member-card" onclick="showMemberDetail(${member.ID})">
+                <img src="${avatarUrl(member.Name, '4f46e5')}" class="member-avatar" alt="${member.Name}">
+                <div class="member-info">
+                    <div class="member-name">${member.Name || 'Unknown'}</div>
+                    <div class="member-meta">
+                        <span><i class="bi bi-envelope"></i> ${member.Email || 'N/A'}</span>
+                        <span><i class="bi bi-hash"></i> ${member.EmpNo || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="d-flex flex-column align-items-end gap-1">
+                    <span class="member-status ${statusClass}" title="${member.ApprovalStatus || 'UNKNOWN'}"></span>
+                    <span class="badge ${roleBadgeClass}" style="font-size: 9px;">${member.Role || 'USER'}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function getRoleBadgeClass(role) {
+    switch(role) {
+        case 'ADMIN': return 'bg-danger';
+        case 'CAPTAIN': return 'bg-warning text-dark';
+        case 'DIRECTOR': return 'bg-primary';
+        default: return 'bg-secondary';
+    }
+}
+
+function filterMembers() {
+    const roleFilter = document.getElementById('memberRoleFilter').value;
+    
+    const projectMembers = allUsers.filter(u => 
+        u.ProjectID === projectId && u.ApprovalStatus === 'APPROVED'
+    );
+    
+    if (roleFilter === 'ALL') {
+        renderMembers(projectMembers);
+    } else {
+        const filtered = projectMembers.filter(u => u.Role === roleFilter);
+        renderMembers(filtered);
+    }
+}
+
+function showMemberDetail(userId) {
+    const member = allUsers.find(u => u.ID === userId);
+    if (!member) return;
+    
+    const statusClass = member.ApprovalStatus === 'APPROVED' ? 'text-success' : 
+                       member.ApprovalStatus === 'PENDING' ? 'text-warning' : 'text-danger';
+    const roleBadgeClass = getRoleBadgeClass(member.Role);
+    const joinedDate = member.CreatedAt ? new Date(member.CreatedAt).toLocaleDateString('en-IN', {
+        day: '2-digit', month: 'long', year: 'numeric'
+    }) : 'N/A';
+    
+    const modalBody = `
+        <div class="text-center mb-3">
+            <img src="${avatarUrl(member.Name, '4f46e5')}" class="rounded-circle" style="width: 80px; height: 80px; object-fit: cover;">
+            <h5 class="mt-2 mb-1">${member.Name || 'Unknown'}</h5>
+            <span class="badge ${roleBadgeClass}">${member.Role || 'USER'}</span>
+        </div>
+        <div class="member-card" style="cursor: default;">
+            <div class="member-info w-100">
+                <div class="member-meta flex-column align-items-start gap-2">
+                    <span><i class="bi bi-envelope"></i> <strong>Email:</strong> ${member.Email || 'N/A'}</span>
+                    <span><i class="bi bi-hash"></i> <strong>Employee ID:</strong> ${member.EmpNo || 'N/A'}</span>
+                    <span><i class="bi bi-building"></i> <strong>Project:</strong> ${member.Project?.Name || `Project #${member.ProjectID}` || 'N/A'}</span>
+                    <span class="${statusClass}"><i class="bi bi-circle-fill" style="font-size: 8px;"></i> <strong>Status:</strong> ${member.ApprovalStatus || 'UNKNOWN'}</span>
+                    <span><i class="bi bi-calendar3"></i> <strong>Joined:</strong> ${joinedDate}</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('userDetailBody').innerHTML = modalBody;
+    
+    const modal = new bootstrap.Modal(document.getElementById('userDetailModal'));
+    modal.show();
 }
 
 // ──────────────────────────────────────────────────────────────
