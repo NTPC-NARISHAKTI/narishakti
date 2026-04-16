@@ -388,9 +388,14 @@ function navigateTo(section, event) {
     event && event.target.closest('.nav-item').classList.add('active');
 
     if (section === 'members') {
+        const pid = Number(projectId);
         const projectMembers = allUsers.filter(u => 
-            u.ProjectID === projectId && u.ApprovalStatus === 'APPROVED'
+            Number(u.ProjectID) === pid
         );
+        console.log('[Members] Loading members for projectId:', pid, 'Found:', projectMembers.length);
+        if (projectMembers.length === 0) {
+            showMessage('membersMessage', 'No members found. Debug: pid=' + pid + ', allUsers count=' + allUsers.length, 'warning');
+        }
         renderMembers(projectMembers);
     }
 }
@@ -424,31 +429,38 @@ function avatarUrl(name, bg = '4f46e5') {
 // ──────────────────────────────────────────────────────────────
 //  DATA LOADING
 // ──────────────────────────────────────────────────────────────
+const PAGE_SIZE = 10;
+let currentOffset = 0;
+let isLoadingPosts = false;
+let hasMorePosts = true;
+let activePosts = [];
+
 async function loadAllData() {
     try {
-        const [postsRes, ordersRes, usersRes, productsRes] = await Promise.all([
-            apiRequest('/posts'),
+        const [ordersRes, usersRes, productsRes] = await Promise.all([
             apiRequest('/orders'),
             apiRequest('/users'),
             apiRequest('/products')
         ]);
 
-        allPosts    = (postsRes.data  || []).filter(p => p.Product?.ProjectID === projectId);
+        // Reset pagination state
+        currentOffset = 0;
+        hasMorePosts = true;
+        activePosts = [];
+        
+        // Load initial posts with pagination
+        await loadMorePosts();
+
         allOrders   = ordersRes.data  || [];
         allUsers    = usersRes.data   || [];
-        allProducts = (productsRes.data || []).filter(p => p.ProjectID === projectId);
+        allProducts = (productsRes.data || []).filter(p => Number(p.ProjectID) === pid);
+
+        console.log('[LoadData] Loaded. Users:', allUsers.length, 'Posts:', allPosts.length, 'Products:', allProducts.length);
+        console.log('[LoadData] All users:', allUsers.map(u => ({ id: u.ID, name: u.Name, pid: u.ProjectID, status: u.ApprovalStatus })));
 
         updateStats();
-        // Filter only active posts for marketplace view
-        const activePosts = allPosts.filter(p => p.Active !== false);
-        renderMarketplace(activePosts);
         renderApprovals();
         renderOrders();
-
-        // Start sliding activities
-        setTimeout(() => {
-            startSlidingActivities();
-        }, 500);
 
     } catch (err) {
         console.error('[LoadData] Failed:', err);
@@ -456,7 +468,68 @@ async function loadAllData() {
     }
 }
 
+async function loadMorePosts() {
+    if (isLoadingPosts || !hasMorePosts) return;
+    
+    isLoadingPosts = true;
+    
+    // Show loading indicator
+    const feed = document.getElementById('instaFeed');
+    const loadingIndicator = document.getElementById('lazyLoadSpinner');
+    
+    try {
+        const response = await apiRequest(`/posts?limit=${PAGE_SIZE}&offset=${currentOffset}`);
+        
+        // Handle paginated response
+        let posts = response.data?.data || response.data || [];
+        let total = response.data?.total || 0;
+        let hasMore = response.data?.has_more !== undefined ? response.data.has_more : posts.length >= PAGE_SIZE;
+        
+        // Filter by project
+        posts = posts.filter(p => p.Product?.ProjectID === projectId);
+        
+        // Filter active posts
+        posts = posts.filter(p => p.Active !== false);
+        
+        activePosts = [...activePosts, ...posts];
+        hasMorePosts = activePosts.length < total || posts.length > 0;
+        currentOffset += posts.length;
+        
+        renderMarketplace(activePosts, !hasMorePosts);
+        
+    } catch (err) {
+        console.error('[LoadMorePosts] Failed:', err);
+    } finally {
+        isLoadingPosts = false;
+    }
+}
+
+// Lazy loading scroll detection
+function setupLazyLoading() {
+    const mainContent = document.querySelector('.main-content');
+    
+    if (!mainContent) return;
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting && hasMorePosts && !isLoadingPosts) {
+                loadMorePosts();
+            }
+        });
+    }, {
+        rootMargin: '100px'
+    });
+    
+    // Observe the sentinel element at the bottom
+    const sentinel = document.getElementById('lazyLoadSentinel');
+    if (sentinel) {
+        observer.observe(sentinel);
+    }
+}
+
 function updateStats() {
+    const pid = Number(projectId);
+    
     // Fixed: Products now shows actual product count, Posts shows post count
     document.getElementById('totalProducts').textContent = allProducts.length;
     document.getElementById('totalPosts').textContent = allPosts.length;
@@ -466,12 +539,12 @@ function updateStats() {
     document.getElementById('totalOrders').textContent = projectOrders.length;
 
     const approvedUsers = allUsers.filter(u =>
-        u.ProjectID === projectId && u.ApprovalStatus === 'APPROVED'
+        Number(u.ProjectID) === pid && u.ApprovalStatus === 'APPROVED'
     );
     document.getElementById('totalMembers').textContent = approvedUsers.length;
 
     const pending = allUsers.filter(u =>
-        u.ProjectID === projectId && u.ApprovalStatus === 'PENDING'
+        Number(u.ProjectID) === pid && u.ApprovalStatus === 'PENDING'
     );
 
     const badge = document.getElementById('navBadge');
@@ -489,16 +562,17 @@ function updateStats() {
 // ──────────────────────────────────────────────────────────────
 //  MARKETPLACE (Posts) - Instagram Style
 // ──────────────────────────────────────────────────────────────
-function renderMarketplace(posts) {
+function renderMarketplace(posts, isLastPage = false) {
     const feed  = document.getElementById('instaFeed');
 
     if (!posts || posts.length === 0) {
         feed.innerHTML = '';
         feed.appendChild(buildEmptyState('bi bi-shop', 'No posts yet', 'Create your first post to start selling in the marketplace', () => showAddPostModal()));
+        feed.innerHTML += '<div id="lazyLoadSentinel"></div>';
         return;
     }
 
-    feed.innerHTML = posts.map(post => {
+    const postsHTML = posts.map(post => {
         const remainingQty = (post.TotalQty || 0) - (post.TotalOrders || 0);
         const createdDate = new Date(post.CreatedAt).toLocaleDateString('en-IN', {
             day: '2-digit', month: 'short', year: 'numeric'
@@ -541,7 +615,7 @@ function renderMarketplace(posts) {
                     </div>
                     <div class="insta-card-meta">
                         <span><i class="bi bi-box"></i> ${remainingQty} available</span>
-                        <span><i class="bi bi-cart3"></i> ${post.TotalOrders || 0} sold</span>
+                        <span><i class="bi bi-cart3"></i> ${postTotalOrdered} sold</span>
                     </div>
                 </div>
                 <div class="insta-card-footer">
@@ -552,6 +626,22 @@ function renderMarketplace(posts) {
             </div>
         `;
     }).join('');
+
+    // Add posts HTML
+    feed.innerHTML = postsHTML;
+
+    // Add lazy load indicator or end message
+    const lazyLoadIndicator = `
+        <div id="lazyLoadSentinel" class="lazy-load-sentinel">
+            ${isLastPage ? '<span class="end-message">You\'re all caught up!</span>' : '<div class="loading-spinner"><div class="spinner"></div><span>Loading more...</span></div>'}
+        </div>
+    `;
+    feed.innerHTML += lazyLoadIndicator;
+
+    // Re-start sliding activities
+    setTimeout(() => {
+        startSlidingActivities();
+    }, 100);
 }
 
 function getPostRecentOrders(postId) {
@@ -645,7 +735,10 @@ function renderMyPosts(posts) {
     empty.style.display = 'none';
     
     grid.innerHTML = posts.map(post => {
-        const remainingQty = (post.TotalQty || 0) - (post.TotalOrders || 0);
+        const postTotalOrdered = allOrders
+            .filter(o => o.PostID === post.ID)
+            .reduce((sum, o) => sum + (o.OrderQuantity || 0), 0);
+        const remainingQty = (post.TotalQty || 0) - postTotalOrdered;
         const isActive = post.Active !== false;
         const statusClass = isActive ? 'status-active' : 'status-inactive';
         const statusText = isActive ? 'Active' : 'Inactive';
@@ -679,7 +772,7 @@ function renderMyPosts(posts) {
                     </div>
                     <div class="insta-card-meta">
                         <span><i class="bi bi-box"></i> ${remainingQty} available</span>
-                        <span><i class="bi bi-cart3"></i> ${post.TotalOrders || 0} sold</span>
+                        <span><i class="bi bi-cart3"></i> ${postTotalOrdered} sold</span>
                     </div>
                 </div>
                 <div class="insta-card-footer">
@@ -798,15 +891,11 @@ document.getElementById('productForm').addEventListener('submit', async (e) => {
 function renderApprovals() {
     const list  = document.getElementById('approvalsList');
     const empty = document.getElementById('approvalsEmpty');
-
-    console.log('[Approvals] Filtering users. ProjectID:', projectId, 'All users:', allUsers);
+    const pid = Number(projectId);
 
     // Filter users by project ID and pending status
     const pending = allUsers.filter(u => {
-        const userProjectId = u.ProjectID || u.projectId;
-        const matches = userProjectId == projectId && u.ApprovalStatus === 'PENDING';
-        console.log('[Approvals] User:', u.Name, 'ProjectID:', userProjectId, 'Status:', u.ApprovalStatus, 'Matches:', matches);
-        return matches;
+        return Number(u.ProjectID) === pid && u.ApprovalStatus === 'PENDING';
     });
 
     if (!pending.length) {
@@ -913,9 +1002,10 @@ function getRoleBadgeClass(role) {
 
 function filterMembers() {
     const roleFilter = document.getElementById('memberRoleFilter').value;
+    const pid = Number(projectId);
     
     const projectMembers = allUsers.filter(u => 
-        u.ProjectID === projectId && u.ApprovalStatus === 'APPROVED'
+        Number(u.ProjectID) === pid
     );
     
     if (roleFilter === 'ALL') {
@@ -1012,6 +1102,11 @@ function renderOrders() {
                         <div class="order-product-meta">Qty: ${order.OrderQuantity || 0} · ₹${(order.TotalPrice || 0).toFixed(2)}</div>
                     </div>
                 </div>
+                ${order.Address ? `
+                <div class="order-address">
+                    <i class="bi bi-geo-alt"></i> ${order.Address}
+                </div>
+                ` : ''}
                 <div class="order-footer">
                     <span class="status-badge ${statusClass}">${order.OrderStatus || 'PENDING'}</span>
                     <button class="btn btn-outline-primary btn-sm" onclick="openOrderModal(${order.ID})">
@@ -1342,8 +1437,11 @@ function viewProductDetails(postId) {
             </div>`;
     }
 
+    const postTotalOrdered = allOrders
+        .filter(o => o.PostID === post.ID)
+        .reduce((sum, o) => sum + (o.OrderQuantity || 0), 0);
     document.getElementById('productDetailPrice').textContent = `₹${(post.Price || 0).toFixed(2)}`;
-    document.getElementById('productDetailQty').textContent = `${post.TotalQty - (post.TotalOrders || 0)} left`;
+    document.getElementById('productDetailQty').textContent = `${post.TotalQty - postTotalOrdered} left`;
     document.getElementById('productDetailDesc').textContent = post.Product?.Description || 'No description available';
 
     const modal = new bootstrap.Modal(document.getElementById('productDetailModal'));

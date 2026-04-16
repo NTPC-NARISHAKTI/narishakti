@@ -618,6 +618,7 @@ function updateQuantity(change) {
 async function submitOrder() {
     const postId = parseInt(document.getElementById('orderPostId').value);
     const quantity = parseInt(document.getElementById('orderQuantity').value);
+    const address = document.getElementById('orderAddress').value.trim();
     
     // Get current user from localStorage
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
@@ -625,6 +626,11 @@ async function submitOrder() {
     
     if (!userId) {
         showToast('User not found. Please login again.', 'danger');
+        return;
+    }
+    
+    if (!address) {
+        showToast('Please enter a delivery address', 'danger');
         return;
     }
     
@@ -637,11 +643,13 @@ async function submitOrder() {
             UserID: userId,
             OrderQuantity: quantity,
             TotalPrice: totalPrice,
-            OrderStatus: 'PENDING'
+            OrderStatus: 'PENDING',
+            Address: address
         });
         
         if (data.success) {
             bootstrap.Modal.getInstance(document.getElementById('orderModal')).hide();
+            document.getElementById('orderAddress').value = '';
             showToast('Order placed successfully!', 'success');
             
             const ordersData = await apiCall('/orders');
