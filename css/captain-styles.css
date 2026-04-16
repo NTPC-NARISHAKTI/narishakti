@@ -469,6 +469,22 @@ body {
 .status-COMPLETED  { background: #d1fae5; color: #065f46; }
 .status-REJECTED   { background: #fee2e2; color: #991b1b; }
 
+/* ── Order Address ── */
+.order-address {
+    padding: 8px 14px;
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.order-address i {
+    color: var(--primary);
+}
+
 /* ── Filter Row ── */
 .filter-row {
     margin-bottom: 14px;
@@ -1134,5 +1150,40 @@ body {
     
     .nav-item i {
         font-size: 18px;
+    }
+}
+
+/* ── Lazy Loading ── */
+.lazy-load-sentinel {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.lazy-load-sentinel .end-message {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.lazy-load-sentinel .loading-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.lazy-load-sentinel .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
     }
 }

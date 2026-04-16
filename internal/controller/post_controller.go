@@ -107,6 +107,32 @@ func CreatePost(c *gin.Context) {
 }
 
 func GetPosts(c *gin.Context) {
+	// Parse pagination parameters
+	limitStr := c.DefaultQuery("limit", "0")
+	offsetStr := c.DefaultQuery("offset", "0")
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 0 {
+		limit = 0 // 0 means no limit (return all)
+	}
+
+	offset, err := strconv.Atoi(offsetStr)
+	if err != nil || offset < 0 {
+		offset = 0
+	}
+
+	// If pagination is requested (limit > 0), use paginated version
+	if limit > 0 {
+		result, err := services.GetPostsPaginated(limit, offset)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to fetch posts", err.Error()))
+			return
+		}
+		c.JSON(http.StatusOK, utils.SuccessResponse("Posts fetched successfully", result))
+		return
+	}
+
+	// Otherwise, return all posts (backward compatible)
 	posts, err := services.GetPostsWithRemainingQty()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to fetch posts", err.Error()))

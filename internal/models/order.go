@@ -13,4 +13,5 @@ type Order struct {
 	OrderStatus      string
 	OrderConfirmedAt *time.Time
 	TotalPrice       float64
+	Address          string
 }

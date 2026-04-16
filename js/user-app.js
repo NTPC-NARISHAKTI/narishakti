@@ -307,8 +307,21 @@ async function apiCall(endpoint, method = 'GET', body = null) {
 // ===================================
 // Marketplace Section
 // ===================================
+const PAGE_SIZE = 12;
+let currentOffset = 0;
+let isLoadingPosts = false;
+let hasMorePosts = true;
+let allPostsCache = [];
+
 async function loadMarketplace() {
     const productsGrid = document.getElementById('productsGrid');
+    const loadMoreContainer = document.getElementById('loadMoreContainer');
+    
+    // Reset pagination state
+    currentOffset = 0;
+    hasMorePosts = true;
+    allPostsCache = [];
+    isLoadingPosts = false;
     
     // Show skeleton loaders
     productsGrid.innerHTML = `
@@ -319,21 +332,17 @@ async function loadMarketplace() {
             <div class="skeleton-card"></div>
         </div>
     `;
-
+    loadMoreContainer.style.display = 'none';
+    
     try {
-        // Load posts and orders in parallel
-        const [postsData, ordersData] = await Promise.all([
-            apiCall('/posts'),
-            apiCall('/orders')
-        ]);
+        // Load initial posts
+        await loadMorePosts();
         
-        allPosts = postsData.data || [];
+        // Load orders
+        const ordersData = await apiCall('/orders');
         allOrders = ordersData.data || [];
         
-        // Filter only active posts for user view
-        const activePosts = allPosts.filter(post => post.Active !== false);
-        
-        if (activePosts.length === 0) {
+        if (allPostsCache.length === 0) {
             productsGrid.innerHTML = `
                 <div class="empty-state" style="grid-column: 1 / -1;">
                     <i class="bi bi-box-seam"></i>
@@ -343,8 +352,13 @@ async function loadMarketplace() {
             `;
             return;
         }
-
-        renderProducts(activePosts);
+        
+        renderProducts(allPostsCache);
+        
+        // Show load more button if there are more posts
+        if (hasMorePosts) {
+            loadMoreContainer.style.display = 'block';
+        }
         
         // Start sliding activities for each product
         setTimeout(() => {
@@ -360,17 +374,57 @@ async function loadMarketplace() {
                 <button class="btn btn-primary" onclick="loadMarketplace()">Retry</button>
             </div>
         `;
+        loadMoreContainer.style.display = 'none';
     }
 }
 
-function renderProducts(posts) {
-    const productsGrid = document.getElementById('productsGrid');
+async function loadMorePosts() {
+    if (isLoadingPosts || !hasMorePosts) return;
     
+    isLoadingPosts = true;
+    
+    try {
+        const response = await apiCall(`/posts?limit=${PAGE_SIZE}&offset=${currentOffset}`);
+        
+        // Handle paginated response
+        let posts = response.data?.data || response.data || [];
+        let total = response.data?.total || 0;
+        let hasMore = response.data?.has_more !== undefined ? response.data.has_more : posts.length >= PAGE_SIZE;
+        
+        // Filter active posts only
+        posts = posts.filter(p => p.Active !== false);
+        
+        allPostsCache = [...allPostsCache, ...posts];
+        hasMorePosts = allPostsCache.length < total || posts.length > 0;
+        currentOffset += posts.length;
+        
+    } catch (err) {
+        console.error('[LoadMorePosts] Failed:', err);
+    } finally {
+        isLoadingPosts = false;
+    }
+}
+
+function renderProducts(posts, isLastPage = false) {
+    const productsGrid = document.getElementById('productsGrid');
+    const loadMoreContainer = document.getElementById('loadMoreContainer');
+    
+    if (!posts || posts.length === 0) {
+        productsGrid.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <i class="bi bi-box-seam"></i>
+                <h4>No products available</h4>
+                <p>Check back later for new items</p>
+            </div>
+        `;
+        return;
+    }
+
     productsGrid.innerHTML = posts.map(post => {
         const postOrders = getPostRecentOrders(post.ID);
         const initialText = postOrders.length > 0 
             ? `<span class="ticker-text"><strong>${postOrders[0].User?.Name || 'Someone'}</strong> just ordered ${postOrders[0].OrderQuantity}x</span>`
-            : `<span class="ticker-text" style="color: var(--text-muted);">Be the first to order!</span>`;
+            : `<span class="ticker-text" style="color: var(--text-muted);">No recent orders</span>`;
         const projectName = post.Product?.Project?.Name || '';
         
         return `
@@ -406,6 +460,112 @@ function renderProducts(posts) {
             </div>
         </div>
     `}).join('');
+
+    // Add load more indicator or end message
+    const loadMoreIndicator = `
+        <div id="loadMoreSentinel" class="load-more-sentinel">
+            ${isLastPage ? '<span class="end-message">You\'re all caught up!</span>' : '<div class="load-more-spinner"><div class="spinner"></div><span>Loading more...</span></div>'}
+        </div>
+    `;
+    
+    // Append to the products grid
+    productsGrid.insertAdjacentHTML('beforeend', loadMoreIndicator);
+    
+    // Re-start sliding activities
+    setTimeout(() => {
+        startSlidingActivities();
+    }, 100);
+}
+
+// Lazy loading scroll detection for load more button
+function setupLazyLoading() {
+    const loadMoreBtn = document.querySelector('.btn-load-more');
+    if (!loadMoreBtn) return;
+    
+    // Intersection Observer for detecting when user is near bottom
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting && hasMorePosts && !isLoadingPosts) {
+                loadMoreProducts();
+            }
+        });
+    }, {
+        rootMargin: '200px' // Trigger when 200px from bottom
+    });
+    
+    // Observe a sentinel element at the bottom
+    const sentinel = document.getElementById('loadMoreSentinel');
+    if (sentinel) {
+        observer.observe(sentinel);
+    }
+}
+
+// Update the loadMarketplace function to setup lazy loading after initial load
+async function loadMarketplace() {
+    const productsGrid = document.getElementById('productsGrid');
+    const loadMoreContainer = document.getElementById('loadMoreContainer');
+    
+    // Reset pagination state
+    currentOffset = 0;
+    hasMorePosts = true;
+    allPostsCache = [];
+    isLoadingPosts = false;
+    
+    // Show skeleton loaders
+    productsGrid.innerHTML = `
+        <div class="skeleton-container">
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+        </div>
+    `;
+    loadMoreContainer.style.display = 'none';
+    
+    try {
+        // Load initial posts
+        await loadMorePosts();
+        
+        // Load orders
+        const ordersData = await apiCall('/orders');
+        allOrders = ordersData.data || [];
+        
+        if (allPostsCache.length === 0) {
+            productsGrid.innerHTML = `
+                <div class="empty-state" style="grid-column: 1 / -1;">
+                    <i class="bi bi-box-seam"></i>
+                    <h4>No products available</h4>
+                    <p>Check back later for new items</p>
+                </div>
+            `;
+            loadMoreContainer.style.display = 'none';
+            return;
+        }
+        
+        renderProducts(allPostsCache);
+        
+        // Show load more button if there are more posts
+        if (hasMorePosts) {
+            loadMoreContainer.style.display = 'block';
+            setupLazyLoading(); // Setup lazy loading observer
+        }
+        
+        // Start sliding activities for each product
+        setTimeout(() => {
+            startSlidingActivities();
+        }, 500);
+    } catch (error) {
+        console.error('Error loading marketplace:', error);
+        productsGrid.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <i class="bi bi-exclamation-triangle"></i>
+                <h4>Error loading products</h4>
+                <p>Please check your connection and try again</p>
+                <button class="btn btn-primary" onclick="loadMarketplace()">Retry</button>
+            </div>
+        `;
+        loadMoreContainer.style.display = 'none';
+    }
 }
 
 function getPostRecentOrders(postId) {
@@ -535,6 +695,7 @@ async function loadProfile() {
             document.getElementById('profileName').value = user.Name || '-';
             document.getElementById('profileEmail').value = user.Email || '-';
             document.getElementById('profilePhone').value = user.PhoneNo || '';
+            document.getElementById('profileAddress').value = user.Address || '';
             document.getElementById('profileProject').value = user.Project?.Name || '-';
             
             // Update avatar
@@ -552,10 +713,12 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const phone = document.getElementById('profilePhone').value;
+    const address = document.getElementById('profileAddress').value;
     
     try {
         await apiCall(`/users/${currentUser.id}`, 'PUT', {
-            PhoneNo: phone
+            PhoneNo: phone,
+            Address: address
         });
         
         showToast('Profile updated successfully!', 'success');
@@ -624,7 +787,7 @@ async function loadMembers() {
 // Order Modal Functions
 // ===================================
 function openOrderModal(postId) {
-    currentPost = allPosts.find(p => p.ID === postId);
+    currentPost = allPosts.find(p => p.ID === postId || p.id === postId);
     if (!currentPost) return;
 
     const modal = new bootstrap.Modal(document.getElementById('orderModal'));
@@ -672,18 +835,32 @@ function updateOrderTotal() {
     document.getElementById('orderTotal').textContent = `$${total.toFixed(2)}`;
 }
 
+function validateAddress(user) {
+    return user.address && user.address.trim().length > 0;
+}
+
 async function submitOrder() {
     if (!currentPost) return;
     
     const quantity = parseInt(document.getElementById('orderQuantity').value);
     const total = quantity * (currentPost.Price || 0);
+    const addressInput = document.getElementById('orderAddress').value.trim();
+    
+    // Prefer modal address, fallback to profile address
+    const address = addressInput || (currentUser.address || '').trim();
+    
+    if (!address) {
+        showToast('Please enter a delivery address', 'danger');
+        return;
+    }
     
     const orderData = {
         PostID: currentPost.ID,
         UserID: currentUser.id,
         OrderQuantity: quantity,
         TotalPrice: total,
-        OrderStatus: 'PENDING'
+        OrderStatus: 'PENDING',
+        Address: address
     };
     
     try {
