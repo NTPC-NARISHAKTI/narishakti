@@ -640,6 +640,10 @@
                                 <input type="number" class="form-control" id="orderTotalPrice" step="0.01" readonly>
                             </div>
                             <div class="col-md-6 mb-3">
+                                <label class="form-label">Address</label>
+                                <input type="text" class="form-control" id="orderAddress" placeholder="Enter delivery address">
+                            </div>
+                            <div class="col-md-6 mb-3">
                                 <label class="form-label">Status</label>
                                 <select class="form-control" id="orderStatus">
                                     <option>PENDING</option>
@@ -665,13 +669,14 @@
                                 <th>User</th>
                                 <th>Qty</th>
                                 <th>Total Price</th>
+                                <th>Address</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="ordersTable">
                             <tr>
-                                <td colspan="7" class="text-center">Loading...</td>
+                                <td colspan="8" class="text-center">Loading...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1706,13 +1711,14 @@
                         <td>${order.User?.Name || '-'}</td>
                         <td>${order.OrderQuantity || 0}</td>
                         <td>$${order.TotalPrice?.toFixed(2) || '0.00'}</td>
+                        <td>${order.Address || '-'}</td>
                         <td><span class="badge badge-custom bg-secondary">${order.OrderStatus || 'PENDING'}</span></td>
                         <td>
                             <button class="btn btn-sm btn-warning" onclick="editOrder(${order.ID})">Edit</button>
                             <button class="btn btn-sm btn-danger" onclick="deleteOrder(${order.ID})">Delete</button>
                         </td>
                     </tr>
-                `).join('') || '<tr><td colspan="7" class="text-center">No orders found</td></tr>';
+                `).join('') || '<tr><td colspan="8" class="text-center">No orders found</td></tr>';
             } catch (error) {
                 showMessage('ordersMessage', 'Error loading orders: ' + error.message, 'danger');
             }
@@ -1756,6 +1762,13 @@
             
             const postId = parseInt(document.getElementById('orderPost').value);
             const quantity = parseInt(document.getElementById('orderQuantity').value);
+            const address = document.getElementById('orderAddress').value.trim();
+            
+            // Validate address is not empty
+            if (!address) {
+                showMessage('ordersMessage', 'Please enter a delivery address', 'danger');
+                return;
+            }
             
             // Validate quantity against available stock (remaining quantity)
             const selectedPost = allPosts.find(p => p.ID == postId);
@@ -1770,7 +1783,8 @@
                 UserID: parseInt(document.getElementById('orderUser').value),
                 OrderQuantity: quantity,
                 TotalPrice: parseFloat(document.getElementById('orderTotalPrice').value),
-                OrderStatus: document.getElementById('orderStatus').value
+                OrderStatus: document.getElementById('orderStatus').value,
+                Address: address
             };
 
             const submitBtn = document.querySelector('#orderForm button[type="submit"]');
@@ -1796,6 +1810,7 @@
         function resetOrderForm() {
             document.getElementById('orderForm').reset();
             document.getElementById('orderTotalPrice').value = '';
+            document.getElementById('orderAddress').value = '';
             
             // Reset edit mode
             const submitBtn = document.querySelector('#orderForm button[type="submit"]');
@@ -1869,6 +1884,7 @@
             document.getElementById('orderUser').value = order.UserID || '';
             document.getElementById('orderQuantity').value = order.OrderQuantity || '';
             document.getElementById('orderStatus').value = order.OrderStatus || 'PENDING';
+            document.getElementById('orderAddress').value = order.Address || '';
             
             // Calculate total price
             calculateOrderTotal();

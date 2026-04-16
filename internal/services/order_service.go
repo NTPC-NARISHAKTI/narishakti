@@ -10,6 +10,11 @@ import (
 )
 
 func CreateOrder(order *models.Order) error {
+	// Address is required
+	if order.Address == "" {
+		return errors.New("address is required")
+	}
+
 	// Validate order quantity against remaining quantity (TotalQty - confirmed orders)
 	var post models.Post
 	if err := database.DB.First(&post, order.PostID).Error; err != nil {

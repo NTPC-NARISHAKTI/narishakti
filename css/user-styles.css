@@ -256,111 +256,18 @@ body {
     align-items: center;
     justify-content: center;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: var(--white);
-    font-size: 64px;
+    min-height: 150px;
 }
 
-.product-info {
-    padding: 12px;
-}
-
-.product-header-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.product-header-info {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 1;
-    min-width: 0;
-}
-
-.product-header-bar .product-title {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text-dark);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.product-project-tag {
-    font-size: 11px;
-    color: var(--text-muted);
-    background: var(--light-bg);
-    padding: 3px 8px;
-    border-radius: 10px;
-    white-space: nowrap;
-}
-
-.product-price-tag {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--primary-color);
-    white-space: nowrap;
-    margin-left: 8px;
-}
-
-.product-description {
-    font-size: 13px;
-    color: var(--text-muted);
-    margin-bottom: 12px;
-    line-height: 1.5;
-}
-
-.product-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.product-price {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--primary-color);
-}
-
-.product-stats {
-    font-size: 12px;
-    color: var(--text-muted);
-    display: flex;
-    gap: 16px;
-    margin-bottom: 12px;
-}
-
-.product-stats span {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.btn-order {
-    padding: 12px 20px;
-    font-size: 14px;
-    font-weight: 600;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+.product-image.placeholder i {
+    font-size: 48px;
+    color: white;
+    opacity: 0.8;
 }
 
 /* ===================================
    Product Card Sliding Activity
    =================================== */
-.product-activity-ticker {
-    position: relative;
-    height: 32px;
-    overflow: hidden;
-    background: linear-gradient(90deg, rgba(39, 174, 96, 0.1) 0%, rgba(39, 174, 96, 0.05) 100%);
-    border-top: 1px solid var(--border-color);
-}
-
 .product-activity-ticker .ticker-content {
     position: absolute;
     width: 100%;
@@ -836,6 +743,43 @@ body {
     margin-top: 20px;
     font-size: 14px;
     font-weight: 500;
+}
+
+/* ===================================
+   Lazy Loading Indicators
+   =================================== */
+.load-more-sentinel {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.load-more-sentinel .end-message {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.load-more-sentinel .load-more-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.load-more-sentinel .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* ===================================
