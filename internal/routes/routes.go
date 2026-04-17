@@ -13,7 +13,7 @@ func SetupRoutes(r *gin.Engine) {
 	auth.Use(middleware.AuthMiddleware())
 	// Routes Private
 	// Project routes
-	r.POST("/projects", controllers.CreateProject)
+	auth.POST("/projects", controllers.CreateProject)
 	r.GET("/projects", controllers.GetProjects) // public for registration dropdown
 	auth.GET("/projects/:id", controllers.GetProject)
 	auth.PUT("/projects/:id", controllers.UpdateProject)

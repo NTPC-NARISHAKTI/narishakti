@@ -618,7 +618,7 @@ function startSlidingActivities() {
 // Search functionality
 document.getElementById('searchInput').addEventListener('input', (e) => {
     const searchTerm = e.target.value.toLowerCase();
-    const filteredPosts = allPosts.filter(post => 
+    const filteredPosts = allPostsCache.filter(post => 
         post.Product?.Name?.toLowerCase().includes(searchTerm) ||
         post.Product?.Description?.toLowerCase().includes(searchTerm)
     );
@@ -787,7 +787,7 @@ async function loadMembers() {
 // Order Modal Functions
 // ===================================
 function openOrderModal(postId) {
-    currentPost = allPosts.find(p => p.ID === postId || p.id === postId);
+    currentPost = allPostsCache.find(p => p.ID === postId || p.id === postId);
     if (!currentPost) return;
 
     const modal = new bootstrap.Modal(document.getElementById('orderModal'));
