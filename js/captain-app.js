@@ -451,8 +451,11 @@ async function loadAllData() {
         // Load initial posts with pagination
         await loadMorePosts();
 
+        allPosts = activePosts; // Copy to allPosts for order filtering
+        
         allOrders   = ordersRes.data  || [];
         allUsers    = usersRes.data   || [];
+        const pid = Number(projectId);
         allProducts = (productsRes.data || []).filter(p => Number(p.ProjectID) === pid);
 
         console.log('[LoadData] Loaded. Users:', allUsers.length, 'Posts:', allPosts.length, 'Products:', allProducts.length);
@@ -573,7 +576,7 @@ function renderMarketplace(posts, isLastPage = false) {
     }
 
     const postsHTML = posts.map(post => {
-        const remainingQty = (post.TotalQty || 0) - (post.TotalOrders || 0);
+        const remainingQty = post.RemainingQty !== undefined ? post.RemainingQty : (post.TotalQty || 0);
         const createdDate = new Date(post.CreatedAt).toLocaleDateString('en-IN', {
             day: '2-digit', month: 'short', year: 'numeric'
         });
@@ -588,7 +591,7 @@ function renderMarketplace(posts, isLastPage = false) {
                     <img src="${avatarUrl(post.Product?.Name || 'P', '4f46e5')}" class="insta-card-avatar" alt="">
                     <div class="insta-card-user">
                         <div class="insta-card-user-name">${post.Product?.Name || 'Unknown Product'}</div>
-                        <div class="insta-card-user-sub">Project #${post.Product?.ProjectID || '—'} · ${createdDate}</div>
+                        <div class="insta-card-user-sub">Project: ${post.Product?.Project?.Name || post.Product?.Project?.name || `Project #${post.Product?.ProjectID}` || '—'} · ${createdDate}</div>
                     </div>
                 </div>
                 ${post.ProductImg
@@ -614,8 +617,8 @@ function renderMarketplace(posts, isLastPage = false) {
                         ${post.Product?.Description || 'No description available for this product'}
                     </div>
                     <div class="insta-card-meta">
-                        <span><i class="bi bi-box"></i> ${remainingQty} available</span>
-                        <span><i class="bi bi-cart3"></i> ${postTotalOrdered} sold</span>
+                        <span><i class="bi bi-box"></i> ${remainingQty} left</span>
+                        <span><i class="bi bi-cart3"></i> ${post.TotalOrders || 0} orders</span>
                     </div>
                 </div>
                 <div class="insta-card-footer">
@@ -735,10 +738,7 @@ function renderMyPosts(posts) {
     empty.style.display = 'none';
     
     grid.innerHTML = posts.map(post => {
-        const postTotalOrdered = allOrders
-            .filter(o => o.PostID === post.ID)
-            .reduce((sum, o) => sum + (o.OrderQuantity || 0), 0);
-        const remainingQty = (post.TotalQty || 0) - postTotalOrdered;
+        const remainingQty = post.RemainingQty !== undefined ? post.RemainingQty : (post.TotalQty || 0);
         const isActive = post.Active !== false;
         const statusClass = isActive ? 'status-active' : 'status-inactive';
         const statusText = isActive ? 'Active' : 'Inactive';
@@ -771,8 +771,8 @@ function renderMyPosts(posts) {
                         ${post.Product?.Description || 'No description available'}
                     </div>
                     <div class="insta-card-meta">
-                        <span><i class="bi bi-box"></i> ${remainingQty} available</span>
-                        <span><i class="bi bi-cart3"></i> ${postTotalOrdered} sold</span>
+                        <span><i class="bi bi-box"></i> ${remainingQty} left</span>
+                        <span><i class="bi bi-cart3"></i> ${postTotalOrdered} orders</span>
                     </div>
                 </div>
                 <div class="insta-card-footer">
@@ -1053,16 +1053,27 @@ function showMemberDetail(userId) {
 }
 
 // ──────────────────────────────────────────────────────────────
-//  ORDERS
-// ──────────────────────────────────────────────────────────────
+ //  ORDERS
+ // ──────────────────────────────────────────────────────────────
 function renderOrders() {
     const list  = document.getElementById('ordersList');
     const empty = document.getElementById('ordersEmpty');
 
-    const projectPostIds = allPosts.map(p => p.ID);
-    const projectOrders  = allOrders.filter(o => projectPostIds.includes(o.PostID));
+    console.log('[renderOrders] projectId:', projectId, 'allPosts:', allPosts.length, 'allOrders:', allOrders.length);
 
-    if (!projectOrders.length) {
+    // Filter orders by checking if the post's ProjectID matches captain's project
+    const pid = Number(projectId);
+    const projectOrders = allOrders.filter(o => {
+        const post = allPosts.find(p => p.ID === o.PostID);
+        return post && Number(post.Product?.ProjectID) === pid;
+    });
+
+    console.log('[renderOrders] projectOrders:', projectOrders.length, 'post details:', allPosts.slice(0, 3).map(p => ({ ID: p.ID, ProductProjectID: p.Product?.ProjectID })));
+
+    // Fallback: if no posts found, show all orders (for debugging)
+    const finalOrders = projectOrders.length > 0 ? projectOrders : allOrders;
+
+     if (!finalOrders.length) {
         list.style.display = 'none';
         empty.style.display = 'block';
         return;
@@ -1121,8 +1132,14 @@ function renderOrders() {
 function filterOrders() {
     const filter = document.getElementById('orderFilter').value;
 
-    const projectPostIds = allPosts.map(p => p.ID);
-    let filtered = allOrders.filter(o => projectPostIds.includes(o.PostID));
+    // Filter orders by checking if the post's ProjectID matches captain's project
+    const pid = Number(projectId);
+    const projectOrders = allOrders.filter(o => {
+        const post = allPosts.find(p => p.ID === o.PostID);
+        return post && Number(post.Product?.ProjectID) === pid;
+    });
+
+    let filtered = projectOrders.length > 0 ? projectOrders : allOrders;
 
     if (filter !== 'ALL') {
         filtered = filtered.filter(o => o.OrderStatus === filter);
@@ -1437,11 +1454,9 @@ function viewProductDetails(postId) {
             </div>`;
     }
 
-    const postTotalOrdered = allOrders
-        .filter(o => o.PostID === post.ID)
-        .reduce((sum, o) => sum + (o.OrderQuantity || 0), 0);
+    const remainingQty = post.RemainingQty !== undefined ? post.RemainingQty : (post.TotalQty || 0);
     document.getElementById('productDetailPrice').textContent = `₹${(post.Price || 0).toFixed(2)}`;
-    document.getElementById('productDetailQty').textContent = `${post.TotalQty - postTotalOrdered} left`;
+    document.getElementById('productDetailQty').textContent = `${remainingQty} left`;
     document.getElementById('productDetailDesc').textContent = post.Product?.Description || 'No description available';
 
     const modal = new bootstrap.Modal(document.getElementById('productDetailModal'));

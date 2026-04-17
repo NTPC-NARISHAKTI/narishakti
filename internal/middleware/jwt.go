@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -20,6 +21,9 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		if tokenString == authHeader {
+			tokenString = authHeader
+		}
 
 		claims := jwt.MapClaims{}
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
@@ -32,7 +36,16 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		c.Set("user_id", claims["user_id"])
+		fmt.Printf("JWT Claims: %v\n", claims)
+
+		userID, ok := claims["user_id"]
+		if !ok {
+			c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "User ID not found in token"))
+			c.Abort()
+			return
+		}
+
+		c.Set("user_id", userID)
 		c.Set("role", claims["role"])
 		c.Next()
 	}
