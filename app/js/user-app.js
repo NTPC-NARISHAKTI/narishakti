@@ -6,7 +6,8 @@
 // ===================================
 // Configuration & State
 // ===================================
-const API_URL = 'http://localhost:8080';
+const API_URL = 'http://localhost:8080/api';
+const BASE_URL = 'http://localhost:8080';
 let authToken = localStorage.getItem('authToken');
 let currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
 let allPosts = [];
@@ -437,7 +438,7 @@ function renderProducts(posts, isLastPage = false) {
                 <span class="product-price-tag">$${(post.Price || 0).toFixed(2)}</span>
             </div>
             ${post.ProductImg ? 
-                `<img src="${API_URL}/${post.ProductImg}" class="product-image" alt="${post.Product?.Name || 'Product'}">` :
+                `<img src="${BASE_URL}/${post.ProductImg}" class="product-image" alt="${post.Product?.Name || 'Product'}">` :
                 `<div class="product-image placeholder">
                     <i class="bi bi-box"></i>
                 </div>`

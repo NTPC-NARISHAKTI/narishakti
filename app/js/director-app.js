@@ -2,7 +2,8 @@
  * Marketplace Director Dashboard - JavaScript Application
  */
 
-const API_URL = 'http://localhost:8080';
+const API_URL = 'http://localhost:8080/api';
+const BASE_URL = 'http://localhost:8080';
 let authToken = localStorage.getItem('authToken');
 let currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
 let allPosts = [];
@@ -294,7 +295,7 @@ function renderMarketplace(posts) {
                 <span class="product-price-tag">$${(post.Price || 0).toFixed(2)}</span>
             </div>
             ${post.ProductImg ? 
-                `<img src="${API_URL}/${post.ProductImg}" class="product-image" alt="${post.Product?.Name || 'Product'}">` :
+                `<img src="${BASE_URL}/${post.ProductImg}" class="product-image" alt="${post.Product?.Name || 'Product'}">` :
                 `<div class="product-image placeholder">
                     <i class="bi bi-box"></i>
                 </div>`
@@ -588,7 +589,7 @@ function openOrderModal(postId) {
     document.getElementById('orderProductInfo').innerHTML = `
         <div class="d-flex align-items-center gap-3 mb-3">
             ${post.ProductImg ? 
-                `<img src="${API_URL}/${post.ProductImg}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">` :
+                `<img src="${BASE_URL}/${post.ProductImg}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">` :
                 `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                     <i class="bi bi-box"></i>
                 </div>`
