@@ -14,6 +14,108 @@ let allOrders = [];
 let userOrders = [];
 let currentPost = null;
 
+function getLatestTimestamp(item) {
+    const rawDate = item?.CreatedAt || item?.createdAt || item?.OrderDate || item?.orderDate || item?.Date || item?.date;
+    const timestamp = rawDate ? new Date(rawDate).getTime() : 0;
+    return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function sortByLatest(data) {
+    return [...(data || [])].sort((a, b) => getLatestTimestamp(b) - getLatestTimestamp(a));
+}
+
+function formatCurrency(amount) {
+    return `₹${(Number(amount) || 0).toFixed(2)}`;
+}
+
+function formatDisplayDateTime(dateValue) {
+    if (!dateValue) return 'Date unavailable';
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return 'Date unavailable';
+    return date.toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function getPostProjectId(post) {
+    return post?.ProjectID || post?.Project?.ID || post?.Product?.ProjectID || post?.Product?.Project?.ID || null;
+}
+
+function createProductCard(post, role = 'user') {
+    const postOrders = getPostRecentOrders(post.ID);
+    const initialText = postOrders.length > 0
+        ? `<span class="ticker-text"><strong>${postOrders[0].User?.Name || 'Someone'}</strong> just ordered ${postOrders[0].OrderQuantity}x</span>`
+        : `<span class="ticker-text" style="color: var(--text-muted);">No recent orders</span>`;
+    const projectName = post.Product?.Project?.Name || '';
+    const remainingQty = post.RemainingQty !== undefined ? post.RemainingQty : post.TotalQty;
+    const postDate = formatDisplayDateTime(post.CreatedAt);
+    const productName = post.Product?.Name || 'Product';
+
+    return `
+        <article class="product-card marketplace-card marketplace-card-${role}">
+            <div class="marketplace-card-top">
+                <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(productName)}&background=3498db&color=fff&size=96" class="marketplace-card-avatar" alt="">
+                <div class="marketplace-card-top-text">
+                    <h3 class="product-title">${productName}</h3>
+                    <div class="marketplace-card-subtitle">
+                        ${projectName ? `<span><i class="bi bi-building"></i> ${projectName}</span>` : ''}
+                        <span><i class="bi bi-calendar3"></i> ${postDate}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="marketplace-card-media">
+                ${post.ProductImg ?
+                    `<img src="${API_URL}/${post.ProductImg}" class="product-image" alt="${productName}">` :
+                    `<div class="product-image placeholder">
+                        <i class="bi bi-box"></i>
+                    </div>`
+                }
+            </div>
+            <div class="product-activity-ticker" id="ticker-${post.ID}">
+                <div class="ticker-content active">
+                    <i class="bi bi-lightning-fill ticker-icon"></i>
+                    ${initialText}
+                </div>
+            </div>
+            <div class="product-info marketplace-card-body">
+                <div class="marketplace-card-price-row">
+                    <span class="product-price-tag">${formatCurrency(post.Price)}</span>
+                    ${projectName ? `<span class="product-project-tag">${projectName}</span>` : ''}
+                </div>
+                <div class="product-stats">
+                    <span><i class="bi bi-cart3"></i> ${post.TotalOrders || 0} orders</span>
+                    <span><i class="bi bi-box-seam"></i> ${remainingQty} left</span>
+                </div>
+                <div class="product-extra-info" id="productInfo-${post.ID}" hidden>
+                    <p>${post.Product?.Description || 'No description available'}</p>
+                    ${projectName ? `<span><i class="bi bi-building"></i> ${projectName}</span>` : ''}
+                </div>
+                <div class="product-actions">
+                    <button class="btn btn-primary btn-order" onclick="openOrderModal(${post.ID})">
+                        <i class="bi bi-bag-plus"></i> Order Now
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-card-info" onclick="toggleProductInfo(event, ${post.ID})">
+                        <i class="bi bi-info-circle"></i> Info
+                    </button>
+                </div>
+            </div>
+        </article>
+    `;
+}
+
+function toggleProductInfo(event, postId) {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const detail = document.getElementById(`productInfo-${postId}`);
+    if (!detail) return;
+    detail.hidden = !detail.hidden;
+}
+
 // ===================================
 // Initialize Application
 // ===================================
@@ -420,46 +522,7 @@ function renderProducts(posts, isLastPage = false) {
         return;
     }
 
-    productsGrid.innerHTML = posts.map(post => {
-        const postOrders = getPostRecentOrders(post.ID);
-        const initialText = postOrders.length > 0 
-            ? `<span class="ticker-text"><strong>${postOrders[0].User?.Name || 'Someone'}</strong> just ordered ${postOrders[0].OrderQuantity}x</span>`
-            : `<span class="ticker-text" style="color: var(--text-muted);">No recent orders</span>`;
-        const projectName = post.Product?.Project?.Name || '';
-        
-        return `
-        <div class="product-card">
-            <div class="product-header-bar">
-                <div class="product-header-info">
-                    <span class="product-title">${post.Product?.Name || 'Product'}</span>
-                    ${projectName ? `<span class="product-project-tag">${projectName}</span>` : ''}
-                </div>
-                <span class="product-price-tag">$${(post.Price || 0).toFixed(2)}</span>
-            </div>
-            ${post.ProductImg ? 
-                `<img src="${API_URL}/${post.ProductImg}" class="product-image" alt="${post.Product?.Name || 'Product'}">` :
-                `<div class="product-image placeholder">
-                    <i class="bi bi-box"></i>
-                </div>`
-            }
-            <div class="product-activity-ticker" id="ticker-${post.ID}">
-                <div class="ticker-content active">
-                    <i class="bi bi-lightning-fill ticker-icon"></i>
-                    ${initialText}
-                </div>
-            </div>
-            <div class="product-info">
-                <div class="product-stats">
-                    <span><i class="bi bi-cart3"></i> ${post.TotalOrders || 0} orders</span>
-                    <span><i class="bi bi-box-seam"></i> ${post.RemainingQty !== undefined ? post.RemainingQty : post.TotalQty} left</span>
-                </div>
-                <p class="product-description">${post.Product?.Description || 'No description available'}</p>
-                <button class="btn btn-primary btn-order w-100" onclick="openOrderModal(${post.ID})">
-                    <i class="bi bi-bag-plus"></i> Order Now
-                </button>
-            </div>
-        </div>
-    `}).join('');
+    productsGrid.innerHTML = posts.map(post => createProductCard(post, 'user')).join('');
 
     // Add load more indicator or end message
     const loadMoreIndicator = `
@@ -635,7 +698,7 @@ async function loadOrders() {
     try {
         const data = await apiCall('/orders');
         // Filter orders for current user
-        userOrders = (data.data || []).filter(order => order.UserID === currentUser.id);
+        userOrders = sortByLatest((data.data || []).filter(order => order.UserID === currentUser.id));
         
         if (userOrders.length === 0) {
             ordersList.style.display = 'none';
@@ -661,12 +724,12 @@ async function loadOrders() {
                     }
                     <div class="order-product-details">
                         <h4 class="order-product-name">${order.Post?.Product?.Name || 'Product'}</h4>
-                        <p class="order-product-meta">Qty: ${order.OrderQuantity || 0} | $${(order.TotalPrice || 0).toFixed(2)}</p>
+                        <p class="order-product-meta">Qty: ${order.OrderQuantity || 0} | ${formatCurrency(order.TotalPrice)}</p>
                     </div>
                 </div>
                 <div class="order-footer">
                     <span class="order-date">${new Date(order.CreatedAt).toLocaleDateString()}</span>
-                    <span class="order-total">$${(order.TotalPrice || 0).toFixed(2)}</span>
+                    <span class="order-total">${formatCurrency(order.TotalPrice)}</span>
                 </div>
             </div>
         `).join('');
@@ -806,7 +869,7 @@ function openOrderModal(postId) {
         }
         <div class="info-details">
             <h6>${currentPost.Product?.Name || 'Product'}</h6>
-            <p class="price">$${(currentPost.Price || 0).toFixed(2)}</p>
+            <p class="price">${formatCurrency(currentPost.Price)}</p>
         </div>
     `;
     
@@ -832,7 +895,7 @@ function updateOrderTotal() {
     if (!currentPost) return;
     const quantity = parseInt(document.getElementById('orderQuantity').value) || 1;
     const total = quantity * (currentPost.Price || 0);
-    document.getElementById('orderTotal').textContent = `$${total.toFixed(2)}`;
+    document.getElementById('orderTotal').textContent = formatCurrency(total);
 }
 
 function validateAddress(user) {
@@ -856,6 +919,8 @@ async function submitOrder() {
     
     const orderData = {
         PostID: currentPost.ID,
+        ProductID: currentPost.ProductID || currentPost.Product?.ID,
+        ProjectID: getPostProjectId(currentPost),
         UserID: currentUser.id,
         OrderQuantity: quantity,
         TotalPrice: total,

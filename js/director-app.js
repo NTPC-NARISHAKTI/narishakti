@@ -8,6 +8,124 @@ let currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
 let allPosts = [];
 let allOrders = [];
 let allUsers = [];
+let currentPost = null;
+
+function getLatestTimestamp(item) {
+    const rawDate = item?.CreatedAt || item?.createdAt || item?.OrderDate || item?.orderDate || item?.Date || item?.date;
+    const timestamp = rawDate ? new Date(rawDate).getTime() : 0;
+    return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function sortByLatest(data) {
+    return [...(data || [])].sort((a, b) => getLatestTimestamp(b) - getLatestTimestamp(a));
+}
+
+function formatCurrency(amount) {
+    return `₹${(Number(amount) || 0).toFixed(2)}`;
+}
+
+function formatDisplayDate(dateValue) {
+    if (!dateValue) return 'Date unavailable';
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return 'Date unavailable';
+    return date.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+    });
+}
+
+function formatDisplayDateTime(dateValue) {
+    if (!dateValue) return 'Date unavailable';
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return 'Date unavailable';
+    return date.toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function getProjectName(source) {
+    return source?.Project?.Name || source?.projectName || source?.ProjectName || 'Project unavailable';
+}
+
+function getPostProjectId(post) {
+    return post?.ProjectID || post?.Project?.ID || post?.Product?.ProjectID || post?.Product?.Project?.ID || null;
+}
+
+function createProductCard(post, role = 'director') {
+    const postOrders = getPostRecentOrders(post.ID);
+    const initialText = postOrders.length > 0
+        ? `<span class="ticker-text"><strong>${postOrders[0].User?.Name || 'Someone'}</strong> just ordered ${postOrders[0].OrderQuantity}x</span>`
+        : `<span class="ticker-text" style="color: var(--text-muted);">No recent orders</span>`;
+    const projectName = getProjectName(post.Product);
+    const postDate = formatDisplayDateTime(post.CreatedAt);
+    const remainingQty = post.RemainingQty !== undefined ? post.RemainingQty : post.TotalQty;
+    const productName = post.Product?.Name || 'Product';
+
+    return `
+        <article class="product-card marketplace-card marketplace-card-${role}">
+            <div class="marketplace-card-top">
+                <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(productName)}&background=9b59b6&color=fff&size=96" class="marketplace-card-avatar" alt="">
+                <div class="marketplace-card-top-text">
+                    <h3 class="product-title">${productName}</h3>
+                    <div class="marketplace-card-subtitle">
+                        <span><i class="bi bi-building"></i> ${projectName}</span>
+                        <span><i class="bi bi-calendar3"></i> ${postDate}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="marketplace-card-media">
+                ${post.ProductImg ?
+                    `<img src="${API_URL}/${post.ProductImg}" class="product-image" alt="${productName}">` :
+                    `<div class="product-image placeholder">
+                        <i class="bi bi-box"></i>
+                    </div>`
+                }
+            </div>
+            <div class="product-activity-ticker" id="ticker-${post.ID}">
+                <div class="ticker-content active">
+                    <i class="bi bi-lightning-fill ticker-icon"></i>
+                    ${initialText}
+                </div>
+            </div>
+            <div class="product-info marketplace-card-body">
+                <div class="marketplace-card-price-row">
+                    <span class="product-price-tag">${formatCurrency(post.Price)}</span>
+                    <span class="product-project-tag">${projectName}</span>
+                </div>
+                <div class="product-stats">
+                    <span><i class="bi bi-cart3"></i> ${post.TotalOrders || 0} orders</span>
+                    <span><i class="bi bi-box-seam"></i> ${remainingQty} left</span>
+                </div>
+                <div class="product-extra-info" id="productInfo-${post.ID}" hidden>
+                    <p>${post.Product?.Description || 'No description available'}</p>
+                    <span><i class="bi bi-building"></i> ${projectName}</span>
+                </div>
+                <div class="product-actions">
+                    <button class="btn btn-primary btn-order" onclick="openOrderModal(${post.ID})">
+                        <i class="bi bi-bag-plus"></i> Order Now
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-card-info" onclick="toggleProductInfo(event, ${post.ID})">
+                        <i class="bi bi-info-circle"></i> Info
+                    </button>
+                </div>
+            </div>
+        </article>
+    `;
+}
+
+function toggleProductInfo(event, postId) {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const detail = document.getElementById(`productInfo-${postId}`);
+    if (!detail) return;
+    detail.hidden = !detail.hidden;
+}
 
 // ===================================
 // Initialize Application
@@ -33,7 +151,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (data.success && data.data) {
                 const userRole = data.data.role;
                 
-                currentUser = { ...currentUser, role: userRole };
+                currentUser = {
+                    ...currentUser,
+                    id: data.data.id,
+                    name: data.data.name,
+                    email: data.data.email,
+                    role: userRole,
+                    projectName: data.data.projectName,
+                    ProjectID: data.data.projectId,
+                    projectId: data.data.projectId
+                };
                 localStorage.setItem('currentUser', JSON.stringify(currentUser));
                 
                 if (userRole === 'ADMIN') {
@@ -114,7 +241,12 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
                     if (meData.success && meData.data) {
                         currentUser = {
                             ...currentUser,
+                            id: meData.data.id,
+                            name: meData.data.name,
+                            email: meData.data.email,
                             projectName: meData.data.projectName,
+                            ProjectID: meData.data.projectId,
+                            projectId: meData.data.projectId
                         };
                         localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     }
@@ -205,8 +337,8 @@ async function loadDirectorData() {
             apiCall('/products')
         ]);
         
-        allPosts = postsData.data || [];
-        allOrders = ordersData.data || [];
+        allPosts = sortByLatest(postsData.data || []);
+        allOrders = sortByLatest(ordersData.data || []);
         allUsers = usersData.data || [];
         window.allProducts = productsData.data || [];
         
@@ -241,7 +373,7 @@ function renderAllProducts() {
     empty.style.display = 'none';
     
     grid.innerHTML = products.map(product => {
-        const projectName = product.Project?.Name || `Project #${product.ProjectID}`;
+        const projectName = getProjectName(product);
         const description = product.Description || '';
         
         return `
@@ -265,8 +397,9 @@ function renderAllProducts() {
 // ===================================
 function renderMarketplace(posts) {
     const productsGrid = document.getElementById('productsGrid');
+    const sortedPosts = sortByLatest(posts);
     
-    if (!posts || posts.length === 0) {
+    if (!sortedPosts || sortedPosts.length === 0) {
         productsGrid.innerHTML = `
             <div class="empty-state" style="grid-column: 1 / -1;">
                 <i class="bi bi-box-seam"></i>
@@ -277,46 +410,7 @@ function renderMarketplace(posts) {
         return;
     }
 
-    productsGrid.innerHTML = posts.map(post => {
-        const postOrders = getPostRecentOrders(post.ID);
-        const initialText = postOrders.length > 0 
-            ? `<span class="ticker-text"><strong>${postOrders[0].User?.Name || 'Someone'}</strong> just ordered ${postOrders[0].OrderQuantity}x</span>`
-            : `<span class="ticker-text" style="color: var(--text-muted);">No recent orders</span>`;
-        const projectName = post.Product?.Project?.Name || '';
-        
-        return `
-        <div class="product-card">
-            <div class="product-header-bar">
-                <div class="product-header-info">
-                    <span class="product-title">${post.Product?.Name || 'Product'}</span>
-                    ${projectName ? `<span class="product-project-tag">${projectName}</span>` : ''}
-                </div>
-                <span class="product-price-tag">$${(post.Price || 0).toFixed(2)}</span>
-            </div>
-            ${post.ProductImg ? 
-                `<img src="${API_URL}/${post.ProductImg}" class="product-image" alt="${post.Product?.Name || 'Product'}">` :
-                `<div class="product-image placeholder">
-                    <i class="bi bi-box"></i>
-                </div>`
-            }
-            <div class="product-activity-ticker" id="ticker-${post.ID}">
-                <div class="ticker-content active">
-                    <i class="bi bi-lightning-fill ticker-icon"></i>
-                    ${initialText}
-                </div>
-            </div>
-            <div class="product-info">
-                <div class="product-stats">
-                    <span><i class="bi bi-cart3"></i> ${post.TotalOrders || 0} orders</span>
-                    <span><i class="bi bi-box-seam"></i> ${post.RemainingQty !== undefined ? post.RemainingQty : post.TotalQty} left</span>
-                </div>
-                <p class="product-description">${post.Product?.Description || 'No description available'}</p>
-                <button class="btn btn-primary btn-order w-100" onclick="openOrderModal(${post.ID})">
-                    <i class="bi bi-bag-plus"></i> Order Now
-                </button>
-            </div>
-        </div>
-    `}).join('');
+    productsGrid.innerHTML = sortedPosts.map(post => createProductCard(post, 'director')).join('');
 }
 
 function getPostRecentOrders(postId) {
@@ -383,7 +477,7 @@ function renderMyOrders() {
     const ordersList = document.getElementById('ordersList');
     const ordersEmpty = document.getElementById('ordersEmpty');
     
-    const myOrders = allOrders.filter(order => order.UserID === currentUser.id);
+    const myOrders = sortByLatest(allOrders.filter(order => order.UserID === currentUser.id));
     
     if (!myOrders || myOrders.length === 0) {
         ordersList.innerHTML = '';
@@ -393,14 +487,13 @@ function renderMyOrders() {
     
     ordersEmpty.style.display = 'none';
     
-    const sortedOrders = myOrders.sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt));
+    const sortedOrders = sortByLatest(myOrders);
     
     ordersList.innerHTML = sortedOrders.map(order => {
         const statusClass = getStatusClass(order.OrderStatus);
         const statusText = order.OrderStatus || 'PENDING';
-        const orderDate = new Date(order.CreatedAt).toLocaleDateString('en-IN', {
-            day: '2-digit', month: 'short', year: 'numeric'
-        });
+        const orderDate = formatDisplayDate(order.CreatedAt);
+        const projectName = getProjectName(order.Post?.Product);
         
         return `
             <div class="director-order-card">
@@ -417,12 +510,12 @@ function renderMyOrders() {
                         <span>Qty: ${order.OrderQuantity}</span>
                     </div>
                     <div class="director-order-detail">
-                        <i class="bi bi-currency-dollar"></i>
-                        <span>Total: $${((order.OrderQuantity || 0) * (order.Post?.Price || 0)).toFixed(2)}</span>
+                        <i class="bi bi-currency-rupee"></i>
+                        <span>Total: ${formatCurrency(order.TotalPrice || ((order.OrderQuantity || 0) * (order.Post?.Price || 0)))}</span>
                     </div>
                     <div class="director-order-detail">
                         <i class="bi bi-building"></i>
-                        <span>Project #${order.Post?.Product?.ProjectID || '—'}</span>
+                        <span>${projectName}</span>
                     </div>
                 </div>
             </div>
@@ -485,7 +578,7 @@ function renderUsers(users) {
                     </div>
                     <div class="user-card-detail">
                         <i class="bi bi-building"></i>
-                        <span>Project #${user.ProjectID || 'N/A'}</span>
+                        <span>${getProjectName(user)}</span>
                     </div>
                     <div class="user-card-detail">
                         <i class="bi bi-check-circle ${statusClass}"></i>
@@ -546,7 +639,7 @@ function showUserDetail(userId) {
             </div>
             <div class="user-card-detail">
                 <i class="bi bi-building"></i>
-                <span>Project ID: ${user.ProjectID || 'N/A'}</span>
+                <span>Project: ${getProjectName(user)}</span>
             </div>
             <div class="user-card-detail">
                 <i class="bi bi-check-circle ${statusClass}"></i>
@@ -583,7 +676,7 @@ function openOrderModal(postId) {
     document.getElementById('availableQty').textContent = `Available: ${post.RemainingQty !== undefined ? post.RemainingQty : post.TotalQty}`;
     
     const total = (post.Price || 0) * 1;
-    document.getElementById('orderTotal').textContent = `$${total.toFixed(2)}`;
+    document.getElementById('orderTotal').textContent = formatCurrency(total);
     
     document.getElementById('orderProductInfo').innerHTML = `
         <div class="d-flex align-items-center gap-3 mb-3">
@@ -595,7 +688,7 @@ function openOrderModal(postId) {
             }
             <div>
                 <h6 class="mb-1">${post.Product?.Name || 'Product'}</h6>
-                <p class="text-muted mb-0" style="font-size: 14px;">$${(post.Price || 0).toFixed(2)} each</p>
+                <p class="text-muted mb-0" style="font-size: 14px;">${formatCurrency(post.Price)} each</p>
             </div>
         </div>
     `;
@@ -612,7 +705,7 @@ function updateQuantity(change) {
     input.value = newValue;
     
     const total = (currentPost?.Price || 0) * newValue;
-    document.getElementById('orderTotal').textContent = `$${total.toFixed(2)}`;
+    document.getElementById('orderTotal').textContent = formatCurrency(total);
 }
 
 async function submitOrder() {
@@ -640,6 +733,8 @@ async function submitOrder() {
     try {
         const data = await apiCall('/orders', 'POST', {
             PostID: postId,
+            ProductID: currentPost?.ProductID || currentPost?.Product?.ID,
+            ProjectID: getPostProjectId(currentPost),
             UserID: userId,
             OrderQuantity: quantity,
             TotalPrice: totalPrice,

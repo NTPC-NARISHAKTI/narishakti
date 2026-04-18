@@ -15,9 +15,8 @@ func CreateOrder(order *models.Order) error {
 		return errors.New("address is required")
 	}
 
-	// Validate order quantity against remaining quantity (TotalQty - confirmed orders)
 	var post models.Post
-	if err := database.DB.First(&post, order.PostID).Error; err != nil {
+	if err := database.DB.Preload("Product").First(&post, order.PostID).Error; err != nil {
 		return errors.New("post not found")
 	}
 
@@ -52,6 +51,10 @@ func GetOrders() ([]models.Order, error) {
 	return repositories.GetOrders()
 }
 
+func GetOrdersByProjectID(projectID uint) ([]models.Order, error) {
+	return repositories.GetOrdersByProjectID(projectID)
+}
+
 func GetOrder(id string) (models.Order, error) {
 	return repositories.GetOrderByID(id)
 }
@@ -65,7 +68,7 @@ func UpdateOrder(order *models.Order) error {
 
 	// Validate order quantity against remaining quantity (TotalQty - confirmed orders excluding this order)
 	var post models.Post
-	if err := database.DB.First(&post, order.PostID).Error; err != nil {
+	if err := database.DB.Preload("Product").First(&post, order.PostID).Error; err != nil {
 		return errors.New("post not found")
 	}
 
