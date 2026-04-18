@@ -2,7 +2,8 @@
  * Marketplace Director Dashboard - JavaScript Application
  */
 
-const API_URL = 'http://localhost:8080';
+const API_URL = 'http://localhost:8080/api';
+const BASE_URL = 'http://localhost:8080';
 let authToken = localStorage.getItem('authToken');
 let currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
 let allPosts = [];
@@ -410,7 +411,46 @@ function renderMarketplace(posts) {
         return;
     }
 
-    productsGrid.innerHTML = sortedPosts.map(post => createProductCard(post, 'director')).join('');
+    productsGrid.innerHTML = posts.map(post => {
+        const postOrders = getPostRecentOrders(post.ID);
+        const initialText = postOrders.length > 0 
+            ? `<span class="ticker-text"><strong>${postOrders[0].User?.Name || 'Someone'}</strong> just ordered ${postOrders[0].OrderQuantity}x</span>`
+            : `<span class="ticker-text" style="color: var(--text-muted);">No recent orders</span>`;
+        const projectName = post.Product?.Project?.Name || '';
+        
+        return `
+        <div class="product-card">
+            <div class="product-header-bar">
+                <div class="product-header-info">
+                    <span class="product-title">${post.Product?.Name || 'Product'}</span>
+                    ${projectName ? `<span class="product-project-tag">${projectName}</span>` : ''}
+                </div>
+                <span class="product-price-tag">$${(post.Price || 0).toFixed(2)}</span>
+            </div>
+            ${post.ProductImg ? 
+                `<img src="${BASE_URL}/${post.ProductImg}" class="product-image" alt="${post.Product?.Name || 'Product'}">` :
+                `<div class="product-image placeholder">
+                    <i class="bi bi-box"></i>
+                </div>`
+            }
+            <div class="product-activity-ticker" id="ticker-${post.ID}">
+                <div class="ticker-content active">
+                    <i class="bi bi-lightning-fill ticker-icon"></i>
+                    ${initialText}
+                </div>
+            </div>
+            <div class="product-info">
+                <div class="product-stats">
+                    <span><i class="bi bi-cart3"></i> ${post.TotalOrders || 0} orders</span>
+                    <span><i class="bi bi-box-seam"></i> ${post.RemainingQty !== undefined ? post.RemainingQty : post.TotalQty} left</span>
+                </div>
+                <p class="product-description">${post.Product?.Description || 'No description available'}</p>
+                <button class="btn btn-primary btn-order w-100" onclick="openOrderModal(${post.ID})">
+                    <i class="bi bi-bag-plus"></i> Order Now
+                </button>
+            </div>
+        </div>
+    `}).join('');
 }
 
 function getPostRecentOrders(postId) {
@@ -681,7 +721,7 @@ function openOrderModal(postId) {
     document.getElementById('orderProductInfo').innerHTML = `
         <div class="d-flex align-items-center gap-3 mb-3">
             ${post.ProductImg ? 
-                `<img src="${API_URL}/${post.ProductImg}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">` :
+                `<img src="${BASE_URL}/${post.ProductImg}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">` :
                 `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                     <i class="bi bi-box"></i>
                 </div>`
