@@ -19,6 +19,7 @@ let allOrders    = [];
 let allUsers     = [];
 let allProducts  = [];            // Products for captain's project
 let editingOrder = null;           // for order status modal
+let lastPendingApprovalCount = null;
 
 // ──────────────────────────────────────────────────────────────
 //  CENTRALIZED API LAYER
@@ -426,6 +427,52 @@ function avatarUrl(name, bg = '4f46e5') {
     return `https://ui-avatars.com/api/?name=${n}&background=${bg}&color=fff&size=120`;
 }
 
+function getLatestTimestamp(item) {
+    const rawDate = item?.CreatedAt || item?.createdAt || item?.OrderDate || item?.orderDate || item?.Date || item?.date;
+    const timestamp = rawDate ? new Date(rawDate).getTime() : 0;
+    return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function sortByLatest(data) {
+    return [...(data || [])].sort((a, b) => getLatestTimestamp(b) - getLatestTimestamp(a));
+}
+
+function formatCurrency(amount) {
+    return `₹${(Number(amount) || 0).toFixed(2)}`;
+}
+
+function getProjectOrders() {
+    const pid = Number(projectId);
+    return allOrders.filter(o => {
+        const post = allPosts.find(p => p.ID === o.PostID);
+        const orderProjectId = o.Post?.Product?.ProjectID || post?.Product?.ProjectID || o.Product?.ProjectID || o.ProjectID || o.Project?.ID;
+        return Number(orderProjectId) === pid;
+    });
+}
+
+function updateApprovalNotifications(pending) {
+    const badge = document.getElementById('navBadge');
+    const pendingCountBadge = document.getElementById('pendingCountBadge');
+    const count = pending.length;
+
+    if (count > 0) {
+        badge.style.display = 'inline-flex';
+        badge.textContent = count;
+        pendingCountBadge.style.display = 'inline';
+        pendingCountBadge.textContent = `${count} pending`;
+    } else {
+        badge.style.display = 'none';
+        pendingCountBadge.style.display = 'none';
+    }
+
+    if (lastPendingApprovalCount !== null && count > lastPendingApprovalCount) {
+        const diff = count - lastPendingApprovalCount;
+        showToast(`${diff} new approval request${diff > 1 ? 's' : ''} pending`, 'warning');
+    }
+
+    lastPendingApprovalCount = count;
+}
+
 // ──────────────────────────────────────────────────────────────
 //  DATA LOADING
 // ──────────────────────────────────────────────────────────────
@@ -488,9 +535,6 @@ async function loadMorePosts() {
         let total = response.data?.total || 0;
         let hasMore = response.data?.has_more !== undefined ? response.data.has_more : posts.length >= PAGE_SIZE;
         
-        // Filter by project
-        posts = posts.filter(p => p.Product?.ProjectID === projectId);
-        
         // Filter active posts
         posts = posts.filter(p => p.Active !== false);
         
@@ -537,9 +581,7 @@ function updateStats() {
     document.getElementById('totalProducts').textContent = allProducts.length;
     document.getElementById('totalPosts').textContent = allPosts.length;
 
-    const projectPostIds = allPosts.map(p => p.ID);
-    const projectOrders  = allOrders.filter(o => projectPostIds.includes(o.PostID));
-    document.getElementById('totalOrders').textContent = projectOrders.length;
+    document.getElementById('totalOrders').textContent = getProjectOrders().length;
 
     const approvedUsers = allUsers.filter(u =>
         Number(u.ProjectID) === pid && u.ApprovalStatus === 'APPROVED'
@@ -550,16 +592,7 @@ function updateStats() {
         Number(u.ProjectID) === pid && u.ApprovalStatus === 'PENDING'
     );
 
-    const badge = document.getElementById('navBadge');
-    if (pending.length > 0) {
-        badge.style.display = 'inline-flex';
-        badge.textContent    = pending.length;
-        document.getElementById('pendingCountBadge').style.display = 'inline';
-        document.getElementById('pendingCountBadge').textContent   = `${pending.length} pending`;
-    } else {
-        badge.style.display = 'none';
-        document.getElementById('pendingCountBadge').style.display = 'none';
-    }
+    updateApprovalNotifications(pending);
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -611,7 +644,7 @@ function renderMarketplace(posts, isLastPage = false) {
                 </div>
                 <div class="insta-card-body">
                     <div class="insta-card-price">
-                        <span class="currency">₹</span>${(post.Price || 0).toFixed(2)}
+                        ${formatCurrency(post.Price)}
                     </div>
                     <div class="insta-card-desc">
                         ${post.Product?.Description || 'No description available for this product'}
@@ -765,7 +798,7 @@ function renderMyPosts(posts) {
                 }
                 <div class="insta-card-body">
                     <div class="insta-card-price">
-                        <span class="currency">₹</span>${(post.Price || 0).toFixed(2)}
+                        ${formatCurrency(post.Price)}
                     </div>
                     <div class="insta-card-desc">
                         ${post.Product?.Description || 'No description available'}
@@ -1061,17 +1094,9 @@ function renderOrders() {
 
     console.log('[renderOrders] projectId:', projectId, 'allPosts:', allPosts.length, 'allOrders:', allOrders.length);
 
-    // Filter orders by checking if the post's ProjectID matches captain's project
-    const pid = Number(projectId);
-    const projectOrders = allOrders.filter(o => {
-        const post = allPosts.find(p => p.ID === o.PostID);
-        return post && Number(post.Product?.ProjectID) === pid;
-    });
+    const finalOrders = getProjectOrders();
 
-    console.log('[renderOrders] projectOrders:', projectOrders.length, 'post details:', allPosts.slice(0, 3).map(p => ({ ID: p.ID, ProductProjectID: p.Product?.ProjectID })));
-
-    // Fallback: if no posts found, show all orders (for debugging)
-    const finalOrders = projectOrders.length > 0 ? projectOrders : allOrders;
+    console.log('[renderOrders] visibleOrders:', finalOrders.length, 'post details:', allPosts.slice(0, 3).map(p => ({ ID: p.ID, ProductProjectID: p.Product?.ProjectID })));
 
      if (!finalOrders.length) {
         list.style.display = 'none';
@@ -1082,7 +1107,7 @@ function renderOrders() {
     empty.style.display = 'none';
     list.style.display  = 'flex';
 
-    list.innerHTML = projectOrders.map(order => {
+    list.innerHTML = sortByLatest(finalOrders).map(order => {
         const statusClass = `status-${order.OrderStatus || 'PENDING'}`;
         const createdDate = new Date(order.CreatedAt).toLocaleDateString('en-IN', {
             day: '2-digit', month: 'short', year: 'numeric'
@@ -1110,7 +1135,7 @@ function renderOrders() {
                     }
                     <div>
                         <div class="order-product-name">${order.Post?.Product?.Name || '—'}</div>
-                        <div class="order-product-meta">Qty: ${order.OrderQuantity || 0} · ₹${(order.TotalPrice || 0).toFixed(2)}</div>
+                        <div class="order-product-meta">Qty: ${order.OrderQuantity || 0} · ${formatCurrency(order.TotalPrice)}</div>
                     </div>
                 </div>
                 ${order.Address ? `
@@ -1132,14 +1157,7 @@ function renderOrders() {
 function filterOrders() {
     const filter = document.getElementById('orderFilter').value;
 
-    // Filter orders by checking if the post's ProjectID matches captain's project
-    const pid = Number(projectId);
-    const projectOrders = allOrders.filter(o => {
-        const post = allPosts.find(p => p.ID === o.PostID);
-        return post && Number(post.Product?.ProjectID) === pid;
-    });
-
-    let filtered = projectOrders.length > 0 ? projectOrders : allOrders;
+    let filtered = getProjectOrders();
 
     if (filter !== 'ALL') {
         filtered = filtered.filter(o => o.OrderStatus === filter);
@@ -1157,7 +1175,7 @@ function filterOrders() {
     empty.style.display = 'none';
     list.style.display = 'flex';
 
-    list.innerHTML = filtered.map(order => {
+    list.innerHTML = sortByLatest(filtered).map(order => {
         const statusClass = `status-${order.OrderStatus || 'PENDING'}`;
         const createdDate = new Date(order.CreatedAt).toLocaleDateString('en-IN', {
             day: '2-digit', month: 'short', year: 'numeric'
@@ -1185,7 +1203,7 @@ function filterOrders() {
                     }
                     <div>
                         <div class="order-product-name">${order.Post?.Product?.Name || '—'}</div>
-                        <div class="order-product-meta">Qty: ${order.OrderQuantity || 0} · ₹${(order.TotalPrice || 0).toFixed(2)}</div>
+                        <div class="order-product-meta">Qty: ${order.OrderQuantity || 0} · ${formatCurrency(order.TotalPrice)}</div>
                     </div>
                 </div>
                 <div class="order-footer">
@@ -1200,8 +1218,11 @@ function filterOrders() {
 }
 
 function openOrderModal(orderId) {
-    editingOrder = allOrders.find(o => o.ID === orderId);
-    if (!editingOrder) return;
+    editingOrder = getProjectOrders().find(o => o.ID === orderId);
+    if (!editingOrder) {
+        showToast('You can only update orders in your project', 'danger');
+        return;
+    }
 
     document.getElementById('orderModalInfo').innerHTML =
         `Order #${editingOrder.ID} · ${editingOrder.User?.Name || '—'} · ${editingOrder.Post?.Product?.Name || '—'}`;
@@ -1215,11 +1236,13 @@ async function submitOrderStatus() {
     if (!editingOrder) return;
 
     const newStatus = document.getElementById('newOrderStatus').value;
+    const pid = getProjectId();
 
     try {
         await apiRequest(`/orders/${editingOrder.ID}`, 'PUT', {
             OrderID:     editingOrder.ID,
-            OrderStatus: newStatus
+            OrderStatus: newStatus,
+            ProjectID:   pid
         });
 
         bootstrap.Modal.getInstance(document.getElementById('orderStatusModal')).hide();
@@ -1455,7 +1478,7 @@ function viewProductDetails(postId) {
     }
 
     const remainingQty = post.RemainingQty !== undefined ? post.RemainingQty : (post.TotalQty || 0);
-    document.getElementById('productDetailPrice').textContent = `₹${(post.Price || 0).toFixed(2)}`;
+    document.getElementById('productDetailPrice').textContent = formatCurrency(post.Price);
     document.getElementById('productDetailQty').textContent = `${remainingQty} left`;
     document.getElementById('productDetailDesc').textContent = post.Product?.Description || 'No description available';
 
