@@ -6,7 +6,8 @@
  * ================================================================
  */
 
-const API_URL = 'http://localhost:8080';
+const API_URL = 'http://localhost:8080/api';
+const BASE_URL = 'http://localhost:8080';
 
 // ──────────────────────────────────────────────────────────────
 //  STATE
@@ -628,7 +629,7 @@ function renderMarketplace(posts, isLastPage = false) {
                     </div>
                 </div>
                 ${post.ProductImg
-                    ? `<img src="${API_URL}/${post.ProductImg}" class="insta-card-image" alt="${post.Product?.Name || 'Product'}" onclick="viewProductDetails(${post.ID})">`
+                    ? `<img src="${BASE_URL}/${post.ProductImg}" class="insta-card-image" alt="${post.Product?.Name || 'Product'}" onclick="viewProductDetails(${post.ID})">`
                     : `<div class="insta-card-image-placeholder" onclick="viewProductDetails(${post.ID})"><i class="bi bi-image"></i></div>`
                 }
                 <div class="product-activity-ticker" id="ticker-${post.ID}">
@@ -793,7 +794,7 @@ function renderMyPosts(posts) {
                     </div>
                 </div>
                 ${post.ProductImg
-                    ? `<img src="${API_URL}/${post.ProductImg}" class="insta-card-image" alt="${post.Product?.Name || 'Product'}">`
+                    ? `<img src="${BASE_URL}/${post.ProductImg}" class="insta-card-image" alt="${post.Product?.Name || 'Product'}">`
                     : `<div class="insta-card-image-placeholder"><i class="bi bi-image"></i></div>`
                 }
                 <div class="insta-card-body">
@@ -1469,7 +1470,7 @@ function viewProductDetails(postId) {
     
     if (post.ProductImg) {
         document.getElementById('productDetailImage').innerHTML = 
-            `<img src="${API_URL}/${post.ProductImg}" class="rounded" style="max-width: 100%; max-height: 200px;">`;
+            `<img src="${BASE_URL}/${post.ProductImg}" class="rounded" style="max-width: 100%; max-height: 200px;">`;
     } else {
         document.getElementById('productDetailImage').innerHTML = 
             `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 150px;">

@@ -9,12 +9,13 @@ import (
 )
 
 func SetupRoutes(r *gin.Engine) {
-	auth := r.Group("/")
+	api := r.Group("/api") // 👈 ADD THIS
+	auth := api.Group("/") // 👈 CHANGE THIS
 	auth.Use(middleware.AuthMiddleware())
 	// Routes Private
 	// Project routes
 	auth.POST("/projects", controllers.CreateProject)
-	r.GET("/projects", controllers.GetProjects) // public for registration dropdown
+	api.GET("/projects", controllers.GetProjects) // public for registration dropdown
 	auth.GET("/projects/:id", controllers.GetProject)
 	auth.PUT("/projects/:id", controllers.UpdateProject)
 	auth.DELETE("/projects/:id", controllers.DeleteProject)
@@ -75,7 +76,7 @@ func SetupRoutes(r *gin.Engine) {
 	auth.DELETE("/logs/:id", controllers.DeleteLog)
 
 	// Auth routes Public
-	r.POST("/register", controllers.Register)
-	r.POST("/login", controllers.Login)
+	api.POST("/register", controllers.Register)
+	api.POST("/login", controllers.Login)
 	auth.GET("/me", controllers.GetCurrentUser)
 }
