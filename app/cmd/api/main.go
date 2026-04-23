@@ -7,6 +7,8 @@ import (
 
 	"marketplace/internal/database"
 
+	// "github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"marketplace/internal/routes"
 )
 
@@ -14,7 +16,7 @@ func main() {
 	database.Connect()
 
 	router := gin.Default()
-
+	router.SetTrustedProxies(nil)
 	// CORS
 	router.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
@@ -50,7 +52,15 @@ func main() {
 		c.File("./captain.html")
 	})
 
+	router.GET("/captain.html", func(c *gin.Context) {
+		c.File("./captain.html")
+	})
+
 	router.GET("/director", func(c *gin.Context) {
+		c.File("./director.html")
+	})
+
+	router.GET("/director.html", func(c *gin.Context) {
 		c.File("./director.html")
 	})
 
@@ -61,7 +71,7 @@ func main() {
 	router.GET("/user.html", func(c *gin.Context) {
 		c.File("./user.html")
 	})
-
+	// router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	// API
 	routes.SetupRoutes(router)
 
