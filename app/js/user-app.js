@@ -510,7 +510,6 @@ async function loadMorePosts() {
 
 function renderProducts(posts, isLastPage = false) {
     const productsGrid = document.getElementById('productsGrid');
-    const loadMoreContainer = document.getElementById('loadMoreContainer');
     
     if (!posts || posts.length === 0) {
         productsGrid.innerHTML = `
@@ -523,49 +522,8 @@ function renderProducts(posts, isLastPage = false) {
         return;
     }
 
-    productsGrid.innerHTML = posts.map(post => {
-        const postOrders = getPostRecentOrders(post.ID);
-        const initialText = postOrders.length > 0 
-            ? `<span class="ticker-text"><strong>${postOrders[0].User?.Name || 'Someone'}</strong> just ordered ${postOrders[0].OrderQuantity}x</span>`
-            : `<span class="ticker-text" style="color: var(--text-muted);">No recent orders</span>`;
-        const projectName = post.Product?.Project?.Name || '';
-        
-        return `
-        <div class="product-card">
-            <div class="product-header-bar">
-                <div class="product-header-info">
-                    <span class="product-title">${post.Product?.Name || 'Product'}</span>
-                    ${projectName ? `<span class="product-project-tag">${projectName}</span>` : ''}
-                </div>
-                <span class="product-price-tag">$${(post.Price || 0).toFixed(2)}</span>
-            </div>
-            ${post.ProductImg ? 
-                `<img src="${BASE_URL}/${post.ProductImg}" class="product-image" alt="${post.Product?.Name || 'Product'}">` :
-                `<div class="product-image placeholder">
-                    <i class="bi bi-box"></i>
-                </div>`
-            }
-            <div class="product-activity-ticker" id="ticker-${post.ID}">
-                <div class="ticker-content active">
-                    <i class="bi bi-lightning-fill ticker-icon"></i>
-                    ${initialText}
-                </div>
-            </div>
-            <div class="product-info">
-                <div class="product-stats">
-                    <span><i class="bi bi-cart3"></i> ${post.TotalOrders || 0} orders</span>
-                    <span><i class="bi bi-box-seam"></i> ${post.RemainingQty !== undefined ? post.RemainingQty : post.TotalQty} left</span>
-                </div>
-                <p class="product-description">${post.Product?.Description || 'No description available'}</p>
-                <button class="btn btn-primary btn-order w-100" onclick="openOrderModal(${post.ID})">
-                    <i class="bi bi-bag-plus"></i> Order Now
-                </button>
-            </div>
-        </div>
-    `}).join('');
-
-    // Add load more indicator or end message
-    const loadMoreIndicator = `
+    productsGrid.innerHTML = posts.map(post => createProductCard(post, 'user')).join('');
+} `
         <div id="loadMoreSentinel" class="load-more-sentinel">
             ${isLastPage ? '<span class="end-message">You\'re all caught up!</span>' : '<div class="load-more-spinner"><div class="spinner"></div><span>Loading more...</span></div>'}
         </div>
