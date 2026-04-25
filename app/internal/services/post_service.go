@@ -57,6 +57,10 @@ func GetPosts() ([]models.Post, error) {
 	return repositories.GetPosts()
 }
 
+func GetPostsByProjectID(projectID uint) ([]models.Post, error) {
+	return repositories.GetPostsByProjectID(projectID)
+}
+
 // PostResult contains paginated posts with metadata
 type PostResult struct {
 	Data    []map[string]interface{} `json:"data"`
@@ -96,9 +100,75 @@ func GetPostsWithRemainingQty() ([]map[string]interface{}, error) {
 	return result, nil
 }
 
+func GetPostsWithRemainingQtyByProjectID(projectID uint) ([]map[string]interface{}, error) {
+	posts, err := repositories.GetPostsByProjectID(projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []map[string]interface{}
+
+	for _, post := range posts {
+		remainingQty := calculateRemainingQty(post.ID, post.TotalQty)
+		postData := map[string]interface{}{
+			"ID":           post.ID,
+			"CreatedAt":    post.CreatedAt,
+			"UpdatedAt":    post.UpdatedAt,
+			"ProductID":    post.ProductID,
+			"Product":      post.Product,
+			"ProductImg":   post.ProductImg,
+			"Price":        post.Price,
+			"TotalQty":     post.TotalQty,
+			"RemainingQty": remainingQty,
+			"TotalOrders":  post.TotalOrders,
+			"Active":       post.Active,
+		}
+		result = append(result, postData)
+	}
+
+	return result, nil
+}
+
 // GetPostsPaginated returns paginated posts with remaining quantity calculation
 func GetPostsPaginated(limit, offset int) (*PostResult, error) {
 	posts, total, err := repositories.GetPostsPaginated(limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []map[string]interface{}
+
+	for _, post := range posts {
+		remainingQty := calculateRemainingQty(post.ID, post.TotalQty)
+		postData := map[string]interface{}{
+			"ID":           post.ID,
+			"CreatedAt":    post.CreatedAt,
+			"UpdatedAt":    post.UpdatedAt,
+			"ProductID":    post.ProductID,
+			"Product":      post.Product,
+			"ProductImg":   post.ProductImg,
+			"Price":        post.Price,
+			"TotalQty":     post.TotalQty,
+			"RemainingQty": remainingQty,
+			"TotalOrders":  post.TotalOrders,
+			"Active":       post.Active,
+		}
+		result = append(result, postData)
+	}
+
+	hasMore := int64(offset+len(posts)) < total
+
+	return &PostResult{
+		Data:    result,
+		Total:   total,
+		Limit:   limit,
+		Offset:  offset,
+		HasMore: hasMore,
+	}, nil
+}
+
+func GetPostsPaginatedByProjectID(limit, offset int, projectID uint) (*PostResult, error) {
+	posts, total, err := repositories.GetPostsPaginatedByProjectID(limit, offset, projectID)
 	if err != nil {
 		return nil, err
 	}

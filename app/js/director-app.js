@@ -66,6 +66,9 @@ function createProductCard(post, role = 'director') {
     const postDate = formatDisplayDateTime(post.CreatedAt);
     const remainingQty = post.RemainingQty !== undefined ? post.RemainingQty : post.TotalQty;
     const productName = post.Product?.Name || 'Product';
+    const shortDescription = (post.Product?.Description || 'No description available')
+        .trim()
+        .slice(0, 120);
 
     return `
         <article class="product-card marketplace-card marketplace-card-${role}">
@@ -98,6 +101,7 @@ function createProductCard(post, role = 'director') {
                     <span class="product-price-tag">${formatCurrency(post.Price)}</span>
                     <span class="product-project-tag">${projectName}</span>
                 </div>
+                <p class="product-short-desc">${shortDescription}${shortDescription.length >= 120 ? '…' : ''}</p>
                 <div class="product-stats">
                     <span><i class="bi bi-cart3"></i> ${post.TotalOrders || 0} orders</span>
                     <span><i class="bi bi-box-seam"></i> ${remainingQty} left</span>
@@ -712,7 +716,8 @@ function updateQuantity(change) {
 async function submitOrder() {
     const postId = parseInt(document.getElementById('orderPostId').value);
     const quantity = parseInt(document.getElementById('orderQuantity').value);
-    const address = document.getElementById('orderAddress').value.trim();
+    const addressField = document.getElementById('orderAddress');
+    const address = addressField.value.trim();
     
     // Get current user from localStorage
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
@@ -725,6 +730,7 @@ async function submitOrder() {
     
     if (!address) {
         showToast('Please enter a delivery address', 'danger');
+        addressField.focus();
         return;
     }
     
@@ -745,7 +751,7 @@ async function submitOrder() {
         
         if (data.success) {
             bootstrap.Modal.getInstance(document.getElementById('orderModal')).hide();
-            document.getElementById('orderAddress').value = '';
+            addressField.value = '';
             showToast('Order placed successfully!', 'success');
             
             const ordersData = await apiCall('/orders');

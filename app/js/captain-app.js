@@ -334,13 +334,11 @@ function logout() {
     allPosts    = [];
     allOrders   = [];
     allUsers    = [];
-    showAuth();
-    document.getElementById('loginForm').reset();
+    window.location.href = '/';
 }
 
 function forceLogout() {
     logout();
-    showMessage('authMessage', 'Session expired — please login again', 'warning');
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -485,10 +483,11 @@ let activePosts = [];
 
 async function loadAllData() {
     try {
-        const [ordersRes, usersRes, productsRes] = await Promise.all([
+        const [ordersRes, usersRes, productsRes, postsRes] = await Promise.all([
             apiRequest('/orders'),
             apiRequest('/users'),
-            apiRequest('/products')
+            apiRequest('/products'),
+            apiRequest('/posts')
         ]);
 
         // Reset pagination state
@@ -499,7 +498,7 @@ async function loadAllData() {
         // Load initial posts with pagination
         await loadMorePosts();
 
-        allPosts = activePosts; // Copy to allPosts for order filtering
+        allPosts = postsRes.data || [];
         
         allOrders   = ordersRes.data  || [];
         allUsers    = usersRes.data   || [];
@@ -730,8 +729,8 @@ function startSlidingActivities() {
 
 function filterMarketplace() {
     const term  = document.getElementById('searchProducts').value.toLowerCase().trim();
-    if (!term) { renderMarketplace(allPosts); return; }
-    const filtered = allPosts.filter(p =>
+    if (!term) { renderMarketplace(activePosts); return; }
+    const filtered = activePosts.filter(p =>
         (p.Product?.Name || '').toLowerCase().includes(term) ||
         (p.Product?.Description || '').toLowerCase().includes(term) ||
         String(p.Price).includes(term)
@@ -779,6 +778,7 @@ function renderMyPosts(posts) {
         const statusIcon = isActive ? 'bi-check-circle-fill' : 'bi-x-circle-fill';
         const toggleText = isActive ? 'Deactivate' : 'Activate';
         const toggleClass = isActive ? 'btn-outline-warning' : 'btn-outline-success';
+        const postTotalOrdered = post.TotalOrders || 0;
         
         return `
             <div class="insta-card">
@@ -853,7 +853,7 @@ async function togglePostActive(postId) {
             filterMyPosts(myPostsFilter);
             
             // Also update marketplace if the post is active/inactive
-            const activePosts = allPosts.filter(p => p.Active !== false);
+            activePosts = allPosts.filter(p => p.Active !== false);
             renderMarketplace(activePosts);
             
             showToast(`Post ${data.data.Active ? 'activated' : 'deactivated'} successfully`, 'success');
@@ -1486,3 +1486,4 @@ function viewProductDetails(postId) {
     const modal = new bootstrap.Modal(document.getElementById('productDetailModal'));
     modal.show();
 }
+

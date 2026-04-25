@@ -194,14 +194,98 @@
             font-weight: bold;
             color: #3498db;
         }
+
+        .brand-lockup {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            text-align: left;
+        }
+
+        .brand-emblem {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: .02em;
+            color: #fff;
+            background: linear-gradient(135deg, #8e2a3d 0%, #d97706 100%);
+            box-shadow: 0 8px 18px rgba(44, 62, 80, 0.16);
+            flex-shrink: 0;
+        }
+
+        .brand-copy {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.1;
+        }
+
+        .brand-ntpc {
+            font-size: 11px;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            font-weight: 800;
+            color: #1f3c88;
+        }
+
+        .brand-name {
+            font-size: 23px;
+            font-weight: 800;
+            color: #8e2a3d;
+        }
+
+        .brand-tagline {
+            font-size: 11px;
+            font-weight: 600;
+            color: #6c757d;
+            margin-top: 4px;
+        }
+
+        .sidebar .brand-lockup {
+            justify-content: flex-start;
+            text-align: left;
+        }
+
+        .sidebar .brand-emblem {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .sidebar .brand-ntpc {
+            color: #c7d2fe;
+            font-size: 9px;
+        }
+
+        .sidebar .brand-name {
+            color: #f8fafc;
+            font-size: 15px;
+        }
+
+        .sidebar .brand-tagline {
+            color: #94a3b8;
+            font-size: 9px;
+            margin-top: 2px;
+        }
     </style>
 </head>
 <body>
     <!-- Auth Container (initially visible) -->
     <div id="authContainer" class="auth-container">
         <div class="auth-card">
-            <div class="logo">
-                <i class="bi bi-shop"></i> Marketplace
+            <div class="logo brand-lockup">
+                <div class="brand-emblem" aria-hidden="true">NS</div>
+                <div class="brand-copy">
+                    <div class="brand-ntpc">NTPC</div>
+                    <div class="brand-name">Naari Shakti</div>
+                    <div class="brand-tagline">Admin Portal</div>
+                </div>
             </div>
             <ul class="nav nav-tabs" role="tablist">
                 <li class="nav-item" role="presentation">
@@ -268,8 +352,13 @@
     <div id="dashboard" style="display: none;">
         <!-- Sidebar -->
         <div class="sidebar">
-            <div class="logo" style="color: white; padding: 10px;">
-                <i class="bi bi-shop"></i> Marketplace
+            <div class="logo brand-lockup" style="color: white; padding: 10px;">
+                <div class="brand-emblem" aria-hidden="true">NS</div>
+                <div class="brand-copy">
+                    <div class="brand-ntpc">NTPC</div>
+                    <div class="brand-name">Naari Shakti</div>
+                    <div class="brand-tagline">Admin Portal</div>
+                </div>
             </div>
             <a href="#" onclick="switchSection('dashboard')" class="sidebar-link active"><i class="bi bi-speedometer2"></i> Dashboard</a>
             <a href="#" onclick="switchSection('users')" class="sidebar-link"><i class="bi bi-people"></i> Users</a>

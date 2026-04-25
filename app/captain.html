@@ -15,25 +15,42 @@
     ============================================================ -->
     <div id="authContainer" class="auth-container">
         <div class="auth-card">
-            <div class="logo">
-                <i class="bi bi-shield-check"></i>
-                <span>Captain Dashboard</span>
+            <div class="logo brand-lockup">
+                <div class="brand-emblem" aria-hidden="true">NS</div>
+                <div class="brand-copy">
+                    <div class="brand-ntpc">NTPC</div>
+                    <div class="brand-name">Naari Shakti</div>
+                    <div class="brand-tagline">Community Marketplace</div>
+                </div>
             </div>
 
-            <form id="loginForm">
-                <div class="mb-3">
-                    <label class="form-label">Email</label>
-                    <input type="email" class="form-control" id="loginEmail" placeholder="captain@example.com" required>
+            <ul class="nav nav-tabs auth-tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="captain-login-tab" data-bs-toggle="tab" data-bs-target="#captain-login-pane" type="button" role="tab" aria-selected="true">Login</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" href="/">Register</a>
+                </li>
+            </ul>
+
+            <div class="tab-content mt-4">
+                <div class="tab-pane fade show active" id="captain-login-pane" role="tabpanel" aria-labelledby="captain-login-tab">
+                    <form id="loginForm">
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="loginEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-control" id="loginPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" id="loginBtn">
+                            <span id="loginBtnText">Login</span>
+                            <span id="loginSpinner" class="spinner-border spinner-border-sm ms-2" style="display:none" role="status"></span>
+                        </button>
+                    </form>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Password</label>
-                    <input type="password" class="form-control" id="loginPassword" placeholder="••••••••" required>
-                </div>
-                <button type="submit" class="btn btn-primary w-100" id="loginBtn">
-                    <span id="loginBtnText">Login</span>
-                    <span id="loginSpinner" class="spinner-border spinner-border-sm ms-2" style="display:none" role="status"></span>
-                </button>
-            </form>
+            </div>
             <div id="authMessage" class="mt-3"></div>
         </div>
     </div>
@@ -490,3 +507,4 @@
     <script src="js/captain-app.js"></script>
 </body>
 </html>
+

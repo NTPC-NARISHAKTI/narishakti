@@ -26,6 +26,7 @@ COPY --from=builder /app/uploads ./uploads
 COPY --from=builder /app/*.html ./
 COPY --from=builder /app/css ./css
 COPY --from=builder /app/js ./js
+COPY --from=builder /app/assets ./assets
 
 EXPOSE 8080
 
