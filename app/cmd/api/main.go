@@ -39,6 +39,7 @@ func main() {
 	router.Static("/css", "./css")
 	router.Static("/js", "./js")
 	router.Static("/uploads", "./uploads")
+	router.Static("/assets", "./assets")
 
 	// Serve HTML pages
 	router.GET("/", func(c *gin.Context) {

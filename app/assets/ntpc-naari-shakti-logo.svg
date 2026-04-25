@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-labelledby="title desc">
+  <title id="title">NTPC Naari Shakti Logo</title>
+  <desc id="desc">Abstract woman with artisan hands, craft motifs and community network</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F6E8DC"/>
+      <stop offset="100%" stop-color="#FCEFD5"/>
+    </linearGradient>
+    <linearGradient id="sari" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#B23A48"/>
+      <stop offset="100%" stop-color="#8E2A3D"/>
+    </linearGradient>
+    <linearGradient id="dupatta" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E2863A"/>
+      <stop offset="100%" stop-color="#C66A1E"/>
+    </linearGradient>
+    <linearGradient id="network" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0E7490"/>
+      <stop offset="100%" stop-color="#166534"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="320" height="320" rx="42" fill="url(#bg)"/>
+
+  <circle cx="160" cy="86" r="30" fill="#F2C5A2"/>
+  <path d="M128 88c5-30 58-35 70 0c-8-12-18-17-35-17s-24 4-35 17z" fill="#4A2A1B"/>
+
+  <path d="M102 148c16-35 44-46 58-46c21 0 46 11 58 46l-29 16c-7-18-15-25-29-25c-13 0-21 7-29 25z" fill="url(#sari)"/>
+  <path d="M117 164c15-24 33-35 45-35c17 0 32 11 44 35v79h-89z" fill="url(#dupatta)"/>
+
+  <path d="M74 184c14-8 26-6 33 6c5 10 2 21-6 29c-7 8-18 8-27 3c-10-6-15-18-10-28c2-5 5-8 10-10z" fill="#F2C5A2"/>
+  <path d="M246 184c-14-8-26-6-33 6c-5 10-2 21 6 29c7 8 18 8 27 3c10-6 15-18 10-28c-2-5-5-8-10-10z" fill="#F2C5A2"/>
+
+  <path d="M106 207l22 11l-12 24l-23-11z" fill="#B85730"/>
+  <path d="M214 207l-22 11l12 24l23-11z" fill="#B85730"/>
+  <circle cx="160" cy="224" r="22" fill="#A44F2A"/>
+  <path d="M147 224h26M160 211v26" stroke="#FCEFD5" stroke-width="4" stroke-linecap="round"/>
+
+  <path d="M62 250c35-30 68-41 98-41s63 11 98 41" fill="none" stroke="url(#network)" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="62" cy="250" r="7" fill="#0E7490"/>
+  <circle cx="111" cy="224" r="6" fill="#166534"/>
+  <circle cx="160" cy="209" r="6" fill="#0E7490"/>
+  <circle cx="209" cy="224" r="6" fill="#166534"/>
+  <circle cx="258" cy="250" r="7" fill="#0E7490"/>
+
+  <g fill="#B23A48" opacity="0.18">
+    <circle cx="44" cy="52" r="5"/>
+    <circle cx="66" cy="52" r="5"/>
+    <circle cx="55" cy="64" r="5"/>
+    <circle cx="254" cy="58" r="5"/>
+    <circle cx="276" cy="58" r="5"/>
+    <circle cx="265" cy="70" r="5"/>
+    <rect x="44" y="258" width="14" height="14" rx="2"/>
+    <rect x="64" y="258" width="14" height="14" rx="2"/>
+    <rect x="54" y="278" width="14" height="14" rx="2"/>
+    <rect x="250" y="258" width="14" height="14" rx="2"/>
+    <rect x="270" y="258" width="14" height="14" rx="2"/>
+    <rect x="260" y="278" width="14" height="14" rx="2"/>
+  </g>
+</svg>

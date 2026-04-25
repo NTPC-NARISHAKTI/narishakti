@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"marketplace/internal/models"
@@ -121,9 +122,37 @@ func GetPosts(c *gin.Context) {
 		offset = 0
 	}
 
+	projectID := uint(0)
+	projectFilterActive := false
+
+	// Captains are always restricted to their own project.
+	if isCaptainRole(c) {
+		captainProjectID, ok := getCaptainProjectIDForPosts(c)
+		if !ok || captainProjectID == 0 {
+			c.JSON(http.StatusForbidden, utils.ErrorResponse("Forbidden", "Captain project not found"))
+			return
+		}
+		projectID = captainProjectID
+		projectFilterActive = true
+	} else {
+		projectIDStr := c.Query("projectId")
+		if projectIDStr != "" {
+			parsed, parseErr := strconv.ParseUint(projectIDStr, 10, 32)
+			if parseErr == nil && parsed > 0 {
+				projectID = uint(parsed)
+				projectFilterActive = true
+			}
+		}
+	}
+
 	// If pagination is requested (limit > 0), use paginated version
 	if limit > 0 {
-		result, err := services.GetPostsPaginated(limit, offset)
+		var result interface{}
+		if projectFilterActive {
+			result, err = services.GetPostsPaginatedByProjectID(limit, offset, projectID)
+		} else {
+			result, err = services.GetPostsPaginated(limit, offset)
+		}
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to fetch posts", err.Error()))
 			return
@@ -133,7 +162,12 @@ func GetPosts(c *gin.Context) {
 	}
 
 	// Otherwise, return all posts (backward compatible)
-	posts, err := services.GetPostsWithRemainingQty()
+	var posts interface{}
+	if projectFilterActive {
+		posts, err = services.GetPostsWithRemainingQtyByProjectID(projectID)
+	} else {
+		posts, err = services.GetPostsWithRemainingQty()
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to fetch posts", err.Error()))
 		return
@@ -218,6 +252,14 @@ func TogglePostActive(c *gin.Context) {
 		return
 	}
 
+	if isCaptainRole(c) {
+		captainProjectID, ok := getCaptainProjectIDForPosts(c)
+		if !ok || captainProjectID == 0 || post.Product.ProjectID != captainProjectID {
+			c.JSON(http.StatusForbidden, utils.ErrorResponse("Forbidden", "You can only update posts in your project"))
+			return
+		}
+	}
+
 	post.Active = !post.Active
 
 	userID, exists := c.Get("user_id")
@@ -234,4 +276,27 @@ func TogglePostActive(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, utils.SuccessResponse("Post status updated successfully", post))
+}
+
+func isCaptainRole(c *gin.Context) bool {
+	role, exists := c.Get("role")
+	if !exists {
+		return false
+	}
+	roleStr, _ := role.(string)
+	return strings.EqualFold(roleStr, "CAPTAIN")
+}
+
+func getCaptainProjectIDForPosts(c *gin.Context) (uint, bool) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		return 0, false
+	}
+
+	captain, err := services.GetUser(fmt.Sprintf("%v", userID))
+	if err != nil || captain.ProjectID == nil {
+		return 0, false
+	}
+
+	return *captain.ProjectID, true
 }
