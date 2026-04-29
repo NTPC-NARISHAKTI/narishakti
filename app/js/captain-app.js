@@ -21,6 +21,8 @@ let allUsers     = [];
 let allProducts  = [];            // Products for captain's project
 let editingOrder = null;           // for order status modal
 let lastPendingApprovalCount = null;
+let revenueInitialized = false;
+let revenueLoaded = false;
 
 // ──────────────────────────────────────────────────────────────
 //  CENTRALIZED API LAYER
@@ -151,6 +153,50 @@ async function apiUpload(url, formData, method = 'POST') {
     if (!res.ok) throw new Error((data && data.error) || `Upload failed: HTTP ${res.status}`);
 
     return data;
+}
+
+async function apiDownload(url, filename) {
+    const token = getToken();
+    const pid = getProjectId();
+    if (!token) {
+        forceLogout();
+        throw new Error('No auth token');
+    }
+
+    if (pid) {
+        const sep = url.includes('?') ? '&' : '?';
+        url += `${sep}projectId=${pid}`;
+    }
+
+    const res = await fetch(`${API_URL}${url}`, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` },
+    });
+
+    if (res.status === 401) {
+        forceLogout();
+        throw new Error('Session expired');
+    }
+
+    if (!res.ok) {
+        let message = `Download failed: HTTP ${res.status}`;
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            const data = await res.json();
+            message = (data && (data.error || data.message)) || message;
+        }
+        throw new Error(message);
+    }
+
+    const blob = await res.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = blobUrl;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.URL.revokeObjectURL(blobUrl);
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -362,6 +408,8 @@ function showDashboard() {
     } else {
         document.getElementById('projectBadge').textContent = 'No Project';
     }
+
+    ensureRevenueDefaults();
 }
 
 async function loadProjectName(projectId) {
@@ -440,6 +488,24 @@ function formatCurrency(amount) {
     return `₹${(Number(amount) || 0).toFixed(2)}`;
 }
 
+function ensureRevenueDefaults() {
+    if (revenueInitialized) return;
+
+    const fromInput = document.getElementById('revenueFrom');
+    const toInput = document.getElementById('revenueTo');
+    const granularityInput = document.getElementById('revenueGranularity');
+    if (!fromInput || !toInput || !granularityInput) return;
+
+    const now = new Date();
+    const toDate = now.toISOString().slice(0, 10);
+    const from = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000);
+    const fromDate = from.toISOString().slice(0, 10);
+
+    fromInput.value = fromDate;
+    toInput.value = toDate;
+    granularityInput.value = 'day';
+    revenueInitialized = true;
+}
 function getProjectOrders() {
     const pid = Number(projectId);
     return allOrders.filter(o => {
@@ -511,6 +577,12 @@ async function loadAllData() {
         updateStats();
         renderApprovals();
         renderOrders();
+        revenueLoaded = false;
+
+        const revenueSection = document.getElementById('section-revenue');
+        if (revenueSection && revenueSection.classList.contains('active')) {
+            await loadRevenueData();
+        }
 
     } catch (err) {
         console.error('[LoadData] Failed:', err);
@@ -864,62 +936,19 @@ async function togglePostActive(postId) {
     }
 }
 
-// Override navigateTo to load My Posts when navigating
+// Override navigateTo to load targeted sections when navigating
 const originalNavigateTo = navigateTo;
 navigateTo = function(section, event) {
     originalNavigateTo(section, event);
-    
+
     if (section === 'my-posts') {
         renderMyPosts(allPosts);
     }
-};
 
-// ──────────────────────────────────────────────────────────────
-//  ADD PRODUCT
-// ──────────────────────────────────────────────────────────────
-function openAddProductModal() {
-    navigateTo('add-product', null);
-}
-
-document.getElementById('productForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    clearMessage('productFormMessage');
-
-    const name        = document.getElementById('productName').value.trim();
-    const description = document.getElementById('productDescription').value.trim();
-    const price       = parseFloat(document.getElementById('productPrice').value);
-    const quantity    = parseInt(document.getElementById('productQuantity').value, 10);
-    const imageFile   = document.getElementById('productImage').files[0];
-
-    try {
-        validatePayload({ name, price, quantity }, ['name', 'price', 'quantity'], 'Product');
-
-        const formData = new FormData();
-        formData.append('Name', name);
-        formData.append('Description', description);
-        formData.append('Price', price);
-        formData.append('TotalQty', quantity);
-        if (imageFile) formData.append('ProductImg', imageFile);
-
-        // Step 1: Create product
-        const prodRes = await apiUpload('/products', formData);
-        if (!prodRes.success || !prodRes.data) throw new Error('Product creation failed');
-
-        const productId = prodRes.data.ID;
-        showToast('Product created! Loading…', 'success');
-
-        // Step 2: Reload to reflect changes
-        document.getElementById('productForm').reset();
-        await loadAllData();
-        navigateTo('marketplace', null);
-        showToast('Product published successfully!', 'success');
-
-    } catch (err) {
-        showMessage('productFormMessage', err.message, 'danger');
+    if (section === 'revenue' && !revenueLoaded) {
+        loadRevenueData();
     }
-});
-
-// ──────────────────────────────────────────────────────────────
+};
 //  APPROVALS
 // ──────────────────────────────────────────────────────────────
 function renderApprovals() {
@@ -1462,6 +1491,119 @@ async function submitAddPost() {
     }
 }
 
+async function loadRevenueData() {
+    try {
+        ensureRevenueDefaults();
+        clearMessage('revenueMessage');
+
+        const from = document.getElementById('revenueFrom')?.value;
+        const to = document.getElementById('revenueTo')?.value;
+        const granularity = document.getElementById('revenueGranularity')?.value || 'day';
+
+        if (!from || !to) {
+            showMessage('revenueMessage', 'Please select from and to dates.', 'warning');
+            return;
+        }
+
+        const query = `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&granularity=${encodeURIComponent(granularity)}&timezone=${encodeURIComponent('Asia/Kolkata')}&top_n=100`;
+
+        const [summaryRes, seriesRes, byProductRes] = await Promise.all([
+            apiRequest(`/reports/revenue/summary?${query}`),
+            apiRequest(`/reports/revenue/timeseries?${query}`),
+            apiRequest(`/reports/revenue/by-product?${query}`),
+        ]);
+
+        const summary = summaryRes?.data?.summary || {};
+        const series = seriesRes?.data?.series || [];
+        const byProduct = byProductRes?.data?.by_product || [];
+
+        renderRevenueSummary(summary);
+        renderRevenueSeries(series);
+        renderRevenueByProduct(byProduct);
+        revenueLoaded = true;
+    } catch (err) {
+        console.error('[Revenue] Failed:', err);
+        showMessage('revenueMessage', 'Failed to load revenue data: ' + err.message, 'danger');
+    }
+}
+
+function renderRevenueSummary(summary) {
+    document.getElementById('revenueTotalAmount').textContent = formatCurrency(summary.total_revenue || 0);
+    document.getElementById('revenueTotalQty').textContent = String(summary.total_quantity || 0);
+    document.getElementById('revenueTotalOrders').textContent = String(summary.total_orders || 0);
+}
+
+function renderRevenueByProduct(rows) {
+    const body = document.getElementById('revenueByProductBody');
+    if (!body) return;
+
+    if (!rows || rows.length === 0) {
+        body.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">No completed-order revenue found for this range.</td></tr>`;
+        return;
+    }
+
+    body.innerHTML = rows.map((row) => `
+        <tr>
+            <td class="text-end">${Number(row.contribution_rank || 0)}</td>
+            <td>${escapeHtml(row.product_name || '-')}</td>
+            <td class="text-end">${formatCurrency(row.total_revenue || 0)}</td>
+            <td class="text-end">${Number(row.total_quantity || 0)}</td>
+            <td class="text-end">${Number(row.total_orders || 0)}</td>
+        </tr>
+    `).join('');
+}
+
+function renderRevenueSeries(rows) {
+    const body = document.getElementById('revenueSeriesBody');
+    if (!body) return;
+
+    if (!rows || rows.length === 0) {
+        body.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">No time-series data for selected filters.</td></tr>`;
+        return;
+    }
+
+    body.innerHTML = rows.map((row) => `
+        <tr>
+            <td>${escapeHtml(row.bucket_start || '-')}</td>
+            <td class="text-end">${formatCurrency(row.total_revenue || 0)}</td>
+            <td class="text-end">${Number(row.total_quantity || 0)}</td>
+            <td class="text-end">${Number(row.total_orders || 0)}</td>
+        </tr>
+    `).join('');
+}
+
+async function exportRevenuePDF() {
+    try {
+        ensureRevenueDefaults();
+
+        const from = document.getElementById('revenueFrom')?.value;
+        const to = document.getElementById('revenueTo')?.value;
+        const granularity = document.getElementById('revenueGranularity')?.value || 'day';
+
+        if (!from || !to) {
+            showToast('Set from/to dates before export.', 'warning');
+            return;
+        }
+
+        const query = `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&granularity=${encodeURIComponent(granularity)}&timezone=${encodeURIComponent('Asia/Kolkata')}`;
+        const filename = `revenue_report_${from}_${to}_${granularity}.pdf`;
+
+        await apiDownload(`/reports/revenue/export?${query}`, filename);
+        showToast('Revenue PDF downloaded', 'success');
+    } catch (err) {
+        console.error('[RevenueExport] Failed:', err);
+        showToast('Export failed: ' + err.message, 'danger');
+    }
+}
+
+function escapeHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 function viewProductDetails(postId) {
     const post = allPosts.find(p => p.ID === postId);
     if (!post) return;
@@ -1486,4 +1628,9 @@ function viewProductDetails(postId) {
     const modal = new bootstrap.Modal(document.getElementById('productDetailModal'));
     modal.show();
 }
+
+
+
+
+
 
