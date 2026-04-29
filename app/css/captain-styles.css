@@ -1272,3 +1272,95 @@ body {
         transform: rotate(360deg);
     }
 }
+
+/* Revenue Section */
+.revenue-filter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.revenue-filter-action {
+    grid-column: span 2;
+    align-self: end;
+}
+
+.revenue-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.revenue-kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.revenue-kpi-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.revenue-kpi-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.revenue-block {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.revenue-block h6 {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.revenue-table {
+    margin-bottom: 0;
+}
+
+.revenue-table th {
+    font-size: 11px;
+    color: var(--text-muted);
+    border-bottom-width: 1px;
+}
+
+.revenue-table td {
+    font-size: 12px;
+    vertical-align: middle;
+}
+
+@media (max-width: 480px) {
+    .revenue-kpis {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (min-width: 768px) {
+    .revenue-filter-grid {
+        grid-template-columns: 1fr 1fr 1fr auto;
+    }
+
+    .revenue-filter-action {
+        grid-column: auto;
+        min-width: 120px;
+    }
+}

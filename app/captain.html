@@ -208,6 +208,94 @@
                 </div>
             </section>
 
+            <!-- SECTION: Revenue -->
+            <section id="section-revenue" class="content-section">
+                <div class="section-header">
+                    <h2><i class="bi bi-graph-up-arrow"></i> Revenue</h2>
+                    <button class="btn btn-outline-primary btn-sm" onclick="exportRevenuePDF()">
+                        <i class="bi bi-file-earmark-pdf"></i> Export PDF
+                    </button>
+                </div>
+
+                <div class="filter-row revenue-filter-row">
+                    <div class="revenue-filter-grid">
+                        <div>
+                            <label class="form-label">From</label>
+                            <input type="date" id="revenueFrom" class="form-control form-control-sm">
+                        </div>
+                        <div>
+                            <label class="form-label">To</label>
+                            <input type="date" id="revenueTo" class="form-control form-control-sm">
+                        </div>
+                        <div>
+                            <label class="form-label">Granularity</label>
+                            <select id="revenueGranularity" class="form-select form-select-sm">
+                                <option value="day">Day</option>
+                                <option value="week">Week</option>
+                                <option value="month">Month</option>
+                            </select>
+                        </div>
+                        <div class="revenue-filter-action">
+                            <button class="btn btn-primary btn-sm w-100" onclick="loadRevenueData()">
+                                <i class="bi bi-funnel"></i> Apply
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="revenueMessage"></div>
+
+                <div class="revenue-kpis">
+                    <div class="revenue-kpi-card">
+                        <span class="revenue-kpi-label">Total Revenue</span>
+                        <span class="revenue-kpi-value" id="revenueTotalAmount">Rs0.00</span>
+                    </div>
+                    <div class="revenue-kpi-card">
+                        <span class="revenue-kpi-label">Quantity Sold</span>
+                        <span class="revenue-kpi-value" id="revenueTotalQty">0</span>
+                    </div>
+                    <div class="revenue-kpi-card">
+                        <span class="revenue-kpi-label">Completed Orders</span>
+                        <span class="revenue-kpi-value" id="revenueTotalOrders">0</span>
+                    </div>
+                </div>
+
+                <div class="revenue-block">
+                    <h6><i class="bi bi-box-seam"></i> Product-wise Revenue</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm revenue-table">
+                            <thead>
+                                <tr>
+                                    <th class="text-end">Rank</th>
+                                    <th>Product</th>
+                                    <th class="text-end">Revenue</th>
+                                    <th class="text-end">Qty</th>
+                                    <th class="text-end">Orders</th>
+                                </tr>
+                            </thead>
+                            <tbody id="revenueByProductBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="revenue-block">
+                    <h6><i class="bi bi-bar-chart-line"></i> Time Series</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm revenue-table">
+                            <thead>
+                                <tr>
+                                    <th>Bucket</th>
+                                    <th class="text-end">Revenue</th>
+                                    <th class="text-end">Qty</th>
+                                    <th class="text-end">Orders</th>
+                                </tr>
+                            </thead>
+                            <tbody id="revenueSeriesBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
             <!-- SECTION: My Posts -->
             <section id="section-my-posts" class="content-section">
                 <div class="section-header">
@@ -271,6 +359,10 @@
             <a href="#" class="nav-item" onclick="navigateTo('orders', event)">
                 <i class="bi bi-bag"></i>
                 <span>Orders</span>
+            </a>
+            <a href="#" class="nav-item" onclick="navigateTo('revenue', event)">
+                <i class="bi bi-graph-up-arrow"></i>
+                <span>Revenue</span>
             </a>
             <a href="#" class="nav-item" onclick="navigateTo('my-posts', event)">
                 <i class="bi bi-collection"></i>

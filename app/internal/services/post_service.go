@@ -206,13 +206,13 @@ func GetPostsPaginatedByProjectID(limit, offset int, projectID uint) (*PostResul
 
 // calculateRemainingQty calculates remaining quantity for a post
 func calculateRemainingQty(postID uint, totalQty int) int {
-	var confirmedOrdersQty int64
+	var finalizedOrdersQty int64
 	database.DB.Model(&models.Order{}).
-		Where("post_id = ? AND order_status = ?", postID, "CONFIRMED").
+		Where("post_id = ? AND order_status IN ?", postID, []string{"CONFIRMED", "COMPLETED"}).
 		Select("COALESCE(SUM(order_quantity), 0)").
-		Scan(&confirmedOrdersQty)
+		Scan(&finalizedOrdersQty)
 
-	remainingQty := totalQty - int(confirmedOrdersQty)
+	remainingQty := totalQty - int(finalizedOrdersQty)
 	if remainingQty < 0 {
 		remainingQty = 0
 	}
