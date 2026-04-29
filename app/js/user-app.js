@@ -55,6 +55,9 @@ function createProductCard(post, role = 'user') {
     const remainingQty = post.RemainingQty !== undefined ? post.RemainingQty : post.TotalQty;
     const postDate = formatDisplayDateTime(post.CreatedAt);
     const productName = post.Product?.Name || 'Product';
+    const shortDescription = (post.Product?.Description || 'No description available')
+        .trim()
+        .slice(0, 120);
 
     return `
         <article class="product-card marketplace-card marketplace-card-${role}">
@@ -87,6 +90,7 @@ function createProductCard(post, role = 'user') {
                     <span class="product-price-tag">${formatCurrency(post.Price)}</span>
                     ${projectName ? `<span class="product-project-tag">${projectName}</span>` : ''}
                 </div>
+                <p class="product-short-desc">${shortDescription}${shortDescription.length >= 120 ? '…' : ''}</p>
                 <div class="product-stats">
                     <span><i class="bi bi-cart3"></i> ${post.TotalOrders || 0} orders</span>
                     <span><i class="bi bi-box-seam"></i> ${remainingQty} left</span>
@@ -416,71 +420,6 @@ let isLoadingPosts = false;
 let hasMorePosts = true;
 let allPostsCache = [];
 
-async function loadMarketplace() {
-    const productsGrid = document.getElementById('productsGrid');
-    const loadMoreContainer = document.getElementById('loadMoreContainer');
-    
-    // Reset pagination state
-    currentOffset = 0;
-    hasMorePosts = true;
-    allPostsCache = [];
-    isLoadingPosts = false;
-    
-    // Show skeleton loaders
-    productsGrid.innerHTML = `
-        <div class="skeleton-container">
-            <div class="skeleton-card"></div>
-            <div class="skeleton-card"></div>
-            <div class="skeleton-card"></div>
-            <div class="skeleton-card"></div>
-        </div>
-    `;
-    loadMoreContainer.style.display = 'none';
-    
-    try {
-        // Load initial posts
-        await loadMorePosts();
-        
-        // Load orders
-        const ordersData = await apiCall('/orders');
-        allOrders = ordersData.data || [];
-        
-        if (allPostsCache.length === 0) {
-            productsGrid.innerHTML = `
-                <div class="empty-state" style="grid-column: 1 / -1;">
-                    <i class="bi bi-box-seam"></i>
-                    <h4>No products available</h4>
-                    <p>Check back later for new items</p>
-                </div>
-            `;
-            return;
-        }
-        
-        renderProducts(allPostsCache);
-        
-        // Show load more button if there are more posts
-        if (hasMorePosts) {
-            loadMoreContainer.style.display = 'block';
-        }
-        
-        // Start sliding activities for each product
-        setTimeout(() => {
-            startSlidingActivities();
-        }, 500);
-    } catch (error) {
-        console.error('Error loading marketplace:', error);
-        productsGrid.innerHTML = `
-            <div class="empty-state" style="grid-column: 1 / -1;">
-                <i class="bi bi-exclamation-triangle"></i>
-                <h4>Error loading products</h4>
-                <p>Please check your connection and try again</p>
-                <button class="btn btn-primary" onclick="loadMarketplace()">Retry</button>
-            </div>
-        `;
-        loadMoreContainer.style.display = 'none';
-    }
-}
-
 async function loadMorePosts() {
     if (isLoadingPosts || !hasMorePosts) return;
     
@@ -492,13 +431,15 @@ async function loadMorePosts() {
         // Handle paginated response
         let posts = response.data?.data || response.data || [];
         let total = response.data?.total || 0;
-        let hasMore = response.data?.has_more !== undefined ? response.data.has_more : posts.length >= PAGE_SIZE;
+        const hasMore = response.data?.has_more !== undefined ? response.data.has_more : posts.length >= PAGE_SIZE;
         
         // Filter active posts only
         posts = posts.filter(p => p.Active !== false);
         
         allPostsCache = [...allPostsCache, ...posts];
-        hasMorePosts = allPostsCache.length < total || posts.length > 0;
+        hasMorePosts = response.data?.has_more !== undefined
+            ? Boolean(hasMore)
+            : (total > 0 ? allPostsCache.length < total : posts.length >= PAGE_SIZE);
         currentOffset += posts.length;
         
     } catch (err) {
@@ -523,45 +464,7 @@ function renderProducts(posts, isLastPage = false) {
     }
 
     productsGrid.innerHTML = posts.map(post => createProductCard(post, 'user')).join('');
-} `
-        <div id="loadMoreSentinel" class="load-more-sentinel">
-            ${isLastPage ? '<span class="end-message">You\'re all caught up!</span>' : '<div class="load-more-spinner"><div class="spinner"></div><span>Loading more...</span></div>'}
-        </div>
-    `;
-    
-    // Append to the products grid
-    productsGrid.insertAdjacentHTML('beforeend', loadMoreIndicator);
-    
-    // Re-start sliding activities
-    setTimeout(() => {
-        startSlidingActivities();
-    }, 100);
 }
-
-// Lazy loading scroll detection for load more button
-function setupLazyLoading() {
-    const loadMoreBtn = document.querySelector('.btn-load-more');
-    if (!loadMoreBtn) return;
-    
-    // Intersection Observer for detecting when user is near bottom
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting && hasMorePosts && !isLoadingPosts) {
-                loadMoreProducts();
-            }
-        });
-    }, {
-        rootMargin: '200px' // Trigger when 200px from bottom
-    });
-    
-    // Observe a sentinel element at the bottom
-    const sentinel = document.getElementById('loadMoreSentinel');
-    if (sentinel) {
-        observer.observe(sentinel);
-    }
-}
-
-// Update the loadMarketplace function to setup lazy loading after initial load
 async function loadMarketplace() {
     const productsGrid = document.getElementById('productsGrid');
     const loadMoreContainer = document.getElementById('loadMoreContainer');
@@ -605,11 +508,7 @@ async function loadMarketplace() {
         
         renderProducts(allPostsCache);
         
-        // Show load more button if there are more posts
-        if (hasMorePosts) {
-            loadMoreContainer.style.display = 'block';
-            setupLazyLoading(); // Setup lazy loading observer
-        }
+        loadMoreContainer.style.display = hasMorePosts ? 'block' : 'none';
         
         // Start sliding activities for each product
         setTimeout(() => {
@@ -905,13 +804,12 @@ async function submitOrder() {
     
     const quantity = parseInt(document.getElementById('orderQuantity').value);
     const total = quantity * (currentPost.Price || 0);
-    const addressInput = document.getElementById('orderAddress').value.trim();
-    
-    // Prefer modal address, fallback to profile address
-    const address = addressInput || (currentUser.address || '').trim();
+    const addressField = document.getElementById('orderAddress');
+    const address = addressField.value.trim();
     
     if (!address) {
         showToast('Please enter a delivery address', 'danger');
+        addressField.focus();
         return;
     }
     
@@ -932,6 +830,7 @@ async function submitOrder() {
         if (response.success) {
             showToast('Order placed successfully!', 'success');
             bootstrap.Modal.getInstance(document.getElementById('orderModal')).hide();
+            addressField.value = '';
             loadMarketplace(); // Refresh products
         } else {
             showToast('Error placing order: ' + (response.error || 'Unknown error'), 'danger');
@@ -985,12 +884,12 @@ async function loadProjectsForSelect(selectId) {
 // ===================================
 // Load More Products (for pagination)
 // ===================================
-let currentPage = 1;
-const itemsPerPage = 12;
-
-function loadMoreProducts() {
-    currentPage++;
-    // In a real implementation, you would fetch more data from the API
-    // For now, we'll just show a message
-    showToast('All products loaded', 'info');
+async function loadMoreProducts() {
+    const loadMoreContainer = document.getElementById('loadMoreContainer');
+    await loadMorePosts();
+    renderProducts(allPostsCache);
+    loadMoreContainer.style.display = hasMorePosts ? 'block' : 'none';
+    setTimeout(() => {
+        startSlidingActivities();
+    }, 100);
 }

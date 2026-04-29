@@ -5,6 +5,8 @@ import (
 	"marketplace/internal/database"
 	"marketplace/internal/models"
 	"marketplace/internal/repositories"
+	"strings"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -20,20 +22,26 @@ func CreateOrder(order *models.Order) error {
 		return errors.New("post not found")
 	}
 
-	// Calculate remaining quantity
-	var confirmedOrdersQty int64
+	// Calculate remaining quantity from finalized orders
+	var finalizedOrdersQty int64
 	database.DB.Model(&models.Order{}).
-		Where("post_id = ? AND order_status = ?", order.PostID, "CONFIRMED").
+		Where("post_id = ? AND order_status IN ?", order.PostID, []string{"CONFIRMED", "COMPLETED"}).
 		Select("COALESCE(SUM(order_quantity), 0)").
-		Scan(&confirmedOrdersQty)
+		Scan(&finalizedOrdersQty)
 
-	remainingQty := post.TotalQty - int(confirmedOrdersQty)
+	remainingQty := post.TotalQty - int(finalizedOrdersQty)
 	if remainingQty < 0 {
 		remainingQty = 0
 	}
 
 	if order.OrderQuantity > remainingQty {
 		return errors.New("order quantity exceeds available remaining quantity in post")
+	}
+
+	applyOrderPricing(order, post.Price)
+	if strings.EqualFold(order.OrderStatus, "COMPLETED") && order.OrderConfirmedAt == nil {
+		now := time.Now().UTC()
+		order.OrderConfirmedAt = &now
 	}
 
 	err := repositories.CreateOrder(order)
@@ -66,26 +74,34 @@ func UpdateOrder(order *models.Order) error {
 		return err
 	}
 
-	// Validate order quantity against remaining quantity (TotalQty - confirmed orders excluding this order)
+	// Validate order quantity against remaining quantity (TotalQty - finalized orders excluding this order)
 	var post models.Post
 	if err := database.DB.Preload("Product").First(&post, order.PostID).Error; err != nil {
 		return errors.New("post not found")
 	}
 
-	// Calculate remaining quantity excluding this order's quantity if it's confirmed
-	var confirmedOrdersQty int64
+	// Calculate remaining quantity excluding this order's quantity if it's finalized
+	var finalizedOrdersQty int64
 	query := database.DB.Model(&models.Order{}).
-		Where("post_id = ? AND order_status = ? AND id != ?", order.PostID, "CONFIRMED", order.ID).
+		Where("post_id = ? AND order_status IN ? AND id != ?", order.PostID, []string{"CONFIRMED", "COMPLETED"}, order.ID).
 		Select("COALESCE(SUM(order_quantity), 0)")
-	query.Scan(&confirmedOrdersQty)
+	query.Scan(&finalizedOrdersQty)
 
-	remainingQty := post.TotalQty - int(confirmedOrdersQty)
+	remainingQty := post.TotalQty - int(finalizedOrdersQty)
 	if remainingQty < 0 {
 		remainingQty = 0
 	}
 
 	if order.OrderQuantity > remainingQty {
 		return errors.New("order quantity exceeds available remaining quantity in post")
+	}
+
+	applyOrderPricing(order, post.Price)
+
+	// Ensure completed orders have confirmation timestamp.
+	if strings.EqualFold(order.OrderStatus, "COMPLETED") && order.OrderConfirmedAt == nil {
+		now := time.Now().UTC()
+		order.OrderConfirmedAt = &now
 	}
 
 	// Check if status is being changed to CONFIRMED or COMPLETED (from a non-final state)
@@ -164,4 +180,13 @@ func DeleteOrder(order *models.Order) error {
 	})
 
 	return err
+}
+
+func applyOrderPricing(order *models.Order, postPrice float64) {
+	order.UnitPrice = postPrice
+	order.GrossAmount = postPrice * float64(order.OrderQuantity)
+	order.TotalPrice = order.GrossAmount
+	if strings.TrimSpace(order.Currency) == "" {
+		order.Currency = "INR"
+	}
 }

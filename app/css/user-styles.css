@@ -89,6 +89,65 @@ body {
     margin-bottom: 10px;
 }
 
+.brand-lockup {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    text-align: left;
+}
+
+.brand-mark {
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+    box-shadow: 0 8px 18px rgba(44, 62, 80, 0.16);
+    flex-shrink: 0;
+}
+
+.brand-emblem {
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: #fff;
+    background: linear-gradient(135deg, #8e2a3d 0%, #d97706 100%);
+    box-shadow: 0 8px 18px rgba(44, 62, 80, 0.16);
+    flex-shrink: 0;
+}
+
+.brand-copy {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.brand-ntpc {
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 800;
+    color: #1f3c88;
+}
+
+.brand-name {
+    font-size: 24px;
+    font-weight: 800;
+    color: #8e2a3d;
+}
+
+.brand-tagline {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
 /* ===================================
    Header Styles
    =================================== */
@@ -1140,6 +1199,164 @@ body {
     border-top-color: var(--primary-color);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
+}
+
+/* ===================================
+   User/Director Marketplace Polish
+   Scoped to avoid global regressions
+   =================================== */
+#userDashboard .main-content,
+#directorDashboard .main-content {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+
+#userDashboard .marketplace-card,
+#directorDashboard .marketplace-card {
+    border-radius: 16px;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    overflow: hidden;
+    background: var(--white);
+}
+
+#userDashboard .marketplace-card-top,
+#directorDashboard .marketplace-card-top {
+    padding: 14px 14px 10px;
+}
+
+#userDashboard .marketplace-card-body,
+#directorDashboard .marketplace-card-body {
+    padding: 14px;
+}
+
+#userDashboard .product-short-desc,
+#directorDashboard .product-short-desc {
+    margin: 0 0 10px;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.45;
+    min-height: 38px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+#userDashboard .product-actions .btn,
+#directorDashboard .product-actions .btn {
+    min-height: 44px;
+    touch-action: manipulation;
+}
+
+#userDashboard .product-actions,
+#directorDashboard .product-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+#userDashboard .product-actions .btn-order,
+#directorDashboard .product-actions .btn-order,
+#userDashboard .product-actions .btn-card-info,
+#directorDashboard .product-actions .btn-card-info {
+    width: 100%;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+#userDashboard .product-actions .btn-card-info,
+#directorDashboard .product-actions .btn-card-info {
+    min-width: 0;
+}
+
+#userDashboard .product-image,
+#directorDashboard .product-image {
+    aspect-ratio: 1 / 1;
+}
+
+#userDashboard .products-grid > .product-card,
+#directorDashboard .products-grid > .product-card {
+    content-visibility: auto;
+    contain-intrinsic-size: 420px;
+}
+
+/* ===================================
+   User/Director Layout Guard
+   Prevent style collisions from captain stylesheet
+   =================================== */
+#userDashboard .bottom-nav,
+#directorDashboard .bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    height: var(--bottom-nav-height);
+    padding-bottom: 0;
+    transform: none;
+    max-width: none;
+    z-index: 1000;
+}
+
+#userDashboard .bottom-nav .nav-item,
+#directorDashboard .bottom-nav .nav-item {
+    flex: 1;
+    width: auto;
+    border-left: none;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 11px;
+    padding: 8px 12px;
+}
+
+#userDashboard .bottom-nav .nav-item i,
+#directorDashboard .bottom-nav .nav-item i {
+    margin-bottom: 2px;
+    font-size: 20px;
+}
+
+#userDashboard .main-content,
+#directorDashboard .main-content {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+@media (min-width: 992px) {
+    #userDashboard .main-content,
+    #directorDashboard .main-content {
+        max-width: 1100px;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 28px;
+    }
+
+    #userDashboard .products-grid,
+    #directorDashboard .products-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 18px;
+    }
+
+    #userDashboard .product-actions,
+    #directorDashboard .product-actions {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    #userDashboard .product-actions .btn-card-info,
+    #directorDashboard .product-actions .btn-card-info {
+        min-width: 84px;
+    }
+
+    #userDashboard .bottom-nav,
+    #directorDashboard .bottom-nav {
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        max-width: 1100px;
+        border-radius: 14px 14px 0 0;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    }
 }
 
 @keyframes spin {

@@ -57,6 +57,10 @@ func GetPosts() ([]models.Post, error) {
 	return repositories.GetPosts()
 }
 
+func GetPostsByProjectID(projectID uint) ([]models.Post, error) {
+	return repositories.GetPostsByProjectID(projectID)
+}
+
 // PostResult contains paginated posts with metadata
 type PostResult struct {
 	Data    []map[string]interface{} `json:"data"`
@@ -69,6 +73,35 @@ type PostResult struct {
 // GetPostsWithRemainingQty returns posts with calculated remaining quantity
 func GetPostsWithRemainingQty() ([]map[string]interface{}, error) {
 	posts, err := repositories.GetPosts()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []map[string]interface{}
+
+	for _, post := range posts {
+		remainingQty := calculateRemainingQty(post.ID, post.TotalQty)
+		postData := map[string]interface{}{
+			"ID":           post.ID,
+			"CreatedAt":    post.CreatedAt,
+			"UpdatedAt":    post.UpdatedAt,
+			"ProductID":    post.ProductID,
+			"Product":      post.Product,
+			"ProductImg":   post.ProductImg,
+			"Price":        post.Price,
+			"TotalQty":     post.TotalQty,
+			"RemainingQty": remainingQty,
+			"TotalOrders":  post.TotalOrders,
+			"Active":       post.Active,
+		}
+		result = append(result, postData)
+	}
+
+	return result, nil
+}
+
+func GetPostsWithRemainingQtyByProjectID(projectID uint) ([]map[string]interface{}, error) {
+	posts, err := repositories.GetPostsByProjectID(projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -134,15 +167,52 @@ func GetPostsPaginated(limit, offset int) (*PostResult, error) {
 	}, nil
 }
 
+func GetPostsPaginatedByProjectID(limit, offset int, projectID uint) (*PostResult, error) {
+	posts, total, err := repositories.GetPostsPaginatedByProjectID(limit, offset, projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []map[string]interface{}
+
+	for _, post := range posts {
+		remainingQty := calculateRemainingQty(post.ID, post.TotalQty)
+		postData := map[string]interface{}{
+			"ID":           post.ID,
+			"CreatedAt":    post.CreatedAt,
+			"UpdatedAt":    post.UpdatedAt,
+			"ProductID":    post.ProductID,
+			"Product":      post.Product,
+			"ProductImg":   post.ProductImg,
+			"Price":        post.Price,
+			"TotalQty":     post.TotalQty,
+			"RemainingQty": remainingQty,
+			"TotalOrders":  post.TotalOrders,
+			"Active":       post.Active,
+		}
+		result = append(result, postData)
+	}
+
+	hasMore := int64(offset+len(posts)) < total
+
+	return &PostResult{
+		Data:    result,
+		Total:   total,
+		Limit:   limit,
+		Offset:  offset,
+		HasMore: hasMore,
+	}, nil
+}
+
 // calculateRemainingQty calculates remaining quantity for a post
 func calculateRemainingQty(postID uint, totalQty int) int {
-	var confirmedOrdersQty int64
+	var finalizedOrdersQty int64
 	database.DB.Model(&models.Order{}).
-		Where("post_id = ? AND order_status = ?", postID, "CONFIRMED").
+		Where("post_id = ? AND order_status IN ?", postID, []string{"CONFIRMED", "COMPLETED"}).
 		Select("COALESCE(SUM(order_quantity), 0)").
-		Scan(&confirmedOrdersQty)
+		Scan(&finalizedOrdersQty)
 
-	remainingQty := totalQty - int(confirmedOrdersQty)
+	remainingQty := totalQty - int(finalizedOrdersQty)
 	if remainingQty < 0 {
 		remainingQty = 0
 	}

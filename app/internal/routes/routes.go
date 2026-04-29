@@ -75,6 +75,14 @@ func SetupRoutes(r *gin.Engine) {
 	auth.PUT("/logs/:id", controllers.UpdateLog)
 	auth.DELETE("/logs/:id", controllers.DeleteLog)
 
+	// Revenue report routes (captain only)
+	reports := auth.Group("/reports")
+	reports.Use(middleware.RoleMiddleware("CAPTAIN"))
+	reports.GET("/revenue/summary", controllers.GetRevenueSummary)
+	reports.GET("/revenue/timeseries", controllers.GetRevenueTimeSeries)
+	reports.GET("/revenue/by-product", controllers.GetRevenueByProduct)
+	reports.GET("/revenue/export", controllers.ExportRevenuePDF)
+
 	// Auth routes Public
 	api.POST("/register", controllers.Register)
 	api.POST("/login", controllers.Login)
