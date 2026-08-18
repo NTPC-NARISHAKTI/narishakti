@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"marketplace/internal/models"
 	"marketplace/internal/services"
@@ -11,9 +12,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// isAdmin reports whether the authenticated caller has the ADMIN role.
+func isAdmin(c *gin.Context) bool {
+	role, _ := c.Get("role")
+	roleStr, _ := role.(string)
+	return strings.EqualFold(roleStr, "ADMIN")
+}
+
 func CreateUser(c *gin.Context) {
 	var input struct {
-		EmpNo     string `json:"EmpNo" binding:"required"`
+		EmpNo     string `json:"EmpNo"`
 		Name      string `json:"Name" binding:"required"`
 		Email     string `json:"Email" binding:"required,email"`
 		PhoneNo   string `json:"PhoneNo"`
@@ -28,7 +36,7 @@ func CreateUser(c *gin.Context) {
 	}
 
 	user := models.User{
-		EmpNo:          input.EmpNo,
+		EmpNo:          models.StringOrNil(input.EmpNo),
 		Name:           input.Name,
 		Email:          input.Email,
 		PhoneNo:        input.PhoneNo,
@@ -81,6 +89,19 @@ func UpdateUser(c *gin.Context) {
 
 	id := c.Param("id")
 
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "User not found in context"))
+		return
+	}
+	updatedBy := uint(userID.(float64))
+
+	admin := isAdmin(c)
+	if !admin && fmt.Sprintf("%v", updatedBy) != id {
+		c.JSON(http.StatusForbidden, utils.ErrorResponse("Forbidden", "You can only update your own profile"))
+		return
+	}
+
 	User, err := services.GetUser(id)
 
 	if err != nil {
@@ -95,55 +116,63 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	// Update User fields from JSON
-	if val, ok := jsonData["EmpNo"]; ok {
-		User.EmpNo = val.(string)
-	}
-	if val, ok := jsonData["Name"]; ok {
-		User.Name = val.(string)
-	}
-	if val, ok := jsonData["Email"]; ok {
-		User.Email = val.(string)
-	}
+	// Non-admin callers may only update their own contact details.
+	// Role, ApprovalStatus, ProjectID, EmpNo and Password are privileged/
+	// identity fields and must go through admin endpoints or the dedicated
+	// change-password flow, otherwise any authenticated user could grant
+	// themselves ADMIN via this endpoint.
 	if val, ok := jsonData["PhoneNo"]; ok {
 		if str, ok := val.(string); ok {
 			User.PhoneNo = str
 		}
 	}
-	if val, ok := jsonData["Role"]; ok {
-		User.Role = val.(string)
-	}
-	if val, ok := jsonData["Password"]; ok {
-		if str, ok := val.(string); ok {
-			// Hash the password before saving
-			hashed, hashErr := utils.HashPassword(str)
-			if hashErr != nil {
-				c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to hash password", hashErr.Error()))
-				return
-			}
-			User.PasswordHash = hashed
-		}
-	}
-	if val, ok := jsonData["ProjectID"]; ok {
-		// Handle nil/null values
-		if val == nil {
-			User.ProjectID = nil
-		} else if num, ok := val.(float64); ok {
-			if num > 0 {
-				projectID := uint(num)
-				User.ProjectID = &projectID
-			} else {
-				User.ProjectID = nil
-			}
-		}
-	}
 
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "User not found in context"))
-		return
+	if admin {
+		if val, ok := jsonData["EmpNo"]; ok {
+			if str, ok := val.(string); ok {
+				User.EmpNo = models.StringOrNil(str)
+			}
+		}
+		if val, ok := jsonData["Name"]; ok {
+			if str, ok := val.(string); ok {
+				User.Name = str
+			}
+		}
+		if val, ok := jsonData["Email"]; ok {
+			if str, ok := val.(string); ok {
+				User.Email = str
+			}
+		}
+		if val, ok := jsonData["Role"]; ok {
+			if str, ok := val.(string); ok {
+				User.Role = str
+			}
+		}
+		if val, ok := jsonData["Password"]; ok {
+			if str, ok := val.(string); ok && str != "" {
+				// Hash the password before saving
+				hashed, hashErr := utils.HashPassword(str)
+				if hashErr != nil {
+					c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to hash password", hashErr.Error()))
+					return
+				}
+				User.PasswordHash = hashed
+			}
+		}
+		if val, ok := jsonData["ProjectID"]; ok {
+			// Handle nil/null values
+			if val == nil {
+				User.ProjectID = nil
+			} else if num, ok := val.(float64); ok {
+				if num > 0 {
+					projectID := uint(num)
+					User.ProjectID = &projectID
+				} else {
+					User.ProjectID = nil
+				}
+			}
+		}
 	}
-	updatedBy := uint(userID.(float64))
 
 	err = services.UpdateUser(&User, updatedBy)
 	if err != nil {
@@ -157,6 +186,11 @@ func UpdateUser(c *gin.Context) {
 }
 
 func DeleteUser(c *gin.Context) {
+	if !isAdmin(c) {
+		c.JSON(http.StatusForbidden, utils.ErrorResponse("Forbidden", "Only administrators can delete users"))
+		return
+	}
+
 	id := c.Param("id")
 
 	User, err := services.GetUser(id)

@@ -47,3 +47,9 @@ func GetUserByEmpNo(empNo string) (*models.User, error) {
 	}
 	return &user, nil
 }
+
+// UpdateUserPassword updates only the password hash for a user, without
+// touching any other fields (used by change-password / admin reset-password).
+func UpdateUserPassword(userID uint, passwordHash string) error {
+	return database.DB.Model(&models.User{}).Where("id = ?", userID).Update("password_hash", passwordHash).Error
+}

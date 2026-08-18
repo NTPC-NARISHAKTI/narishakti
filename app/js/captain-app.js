@@ -371,7 +371,22 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     }
 });
 
-function logout() {
+async function logout() {
+    try {
+        const token = getToken();
+        if (token) {
+            await fetch(`${API_URL}/logout`, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+    }
+    
     localStorage.removeItem('authToken');
     localStorage.removeItem('currentUser');
     authToken   = '';
@@ -380,7 +395,71 @@ function logout() {
     allPosts    = [];
     allOrders   = [];
     allUsers    = [];
-    window.location.href = '/';
+    // Logout always returns to the community marketplace/login, not the
+    // Captain dashboard's own login screen.
+    window.location.href = 'user.html';
+}
+
+// Force a fresh auth check if this page is restored from the
+// back/forward cache after logout, instead of showing stale
+// authenticated UI from memory.
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        window.location.reload();
+    }
+});
+
+function togglePasswordVisibility(btn) {
+    const input = btn.previousElementSibling;
+    if (!input) return;
+    const icon = btn.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'bi bi-eye';
+    }
+}
+
+function showForgotPasswordNotice(event) {
+    event.preventDefault();
+    const notice = document.getElementById('forgotPasswordNotice');
+    if (notice) notice.style.display = 'block';
+}
+
+function openChangePasswordModal() {
+    document.getElementById('changePasswordMessage').innerHTML = '';
+    document.getElementById('currentPasswordInput').value = '';
+    document.getElementById('newPasswordInput').value = '';
+    new bootstrap.Modal(document.getElementById('changePasswordModal')).show();
+}
+
+async function submitChangePassword() {
+    const currentPassword = document.getElementById('currentPasswordInput').value;
+    const newPassword = document.getElementById('newPasswordInput').value;
+
+    if (!currentPassword || !newPassword) {
+        showToast('Please fill in both fields', 'danger');
+        return;
+    }
+    if (newPassword.length < 6) {
+        showToast('New password must be at least 6 characters', 'danger');
+        return;
+    }
+
+    try {
+        const data = await apiRequest('/change-password', 'POST', { currentPassword, newPassword });
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
+            showToast('Password changed successfully. Please log in again.', 'success');
+            logout();
+        } else {
+            showToast(data.error || data.message || 'Failed to change password', 'danger');
+        }
+    } catch (error) {
+        showToast('Error: ' + error.message, 'danger');
+    }
 }
 
 function forceLogout() {
@@ -729,6 +808,9 @@ function renderMarketplace(posts, isLastPage = false) {
                 <div class="insta-card-footer">
                     <button class="btn btn-outline-primary" onclick="viewProductDetails(${post.ID})">
                         <i class="bi bi-info-circle"></i> View Details
+                    </button>
+                    <button class="btn btn-primary" onclick="openPlaceOrderModal(${post.ID})" ${remainingQty <= 0 ? 'disabled' : ''}>
+                        <i class="bi bi-bag-plus"></i> Order Now
                     </button>
                 </div>
             </div>
@@ -1604,17 +1686,22 @@ function escapeHtml(value) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
 }
+
+let currentDetailPostId = null;
+
 function viewProductDetails(postId) {
     const post = allPosts.find(p => p.ID === postId);
     if (!post) return;
 
+    currentDetailPostId = postId;
+
     document.getElementById('productDetailTitle').textContent = post.Product?.Name || 'Product Details';
-    
+
     if (post.ProductImg) {
-        document.getElementById('productDetailImage').innerHTML = 
+        document.getElementById('productDetailImage').innerHTML =
             `<img src="${BASE_URL}/${post.ProductImg}" class="rounded" style="max-width: 100%; max-height: 200px;">`;
     } else {
-        document.getElementById('productDetailImage').innerHTML = 
+        document.getElementById('productDetailImage').innerHTML =
             `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 150px;">
                 <i class="bi bi-box" style="font-size: 48px; color: #ccc;"></i>
             </div>`;
@@ -1622,15 +1709,92 @@ function viewProductDetails(postId) {
 
     const remainingQty = post.RemainingQty !== undefined ? post.RemainingQty : (post.TotalQty || 0);
     document.getElementById('productDetailPrice').textContent = formatCurrency(post.Price);
+    document.getElementById('productDetailPlant').textContent = post.Product?.Project?.Name || post.Product?.Project?.name || '—';
     document.getElementById('productDetailQty').textContent = `${remainingQty} left`;
     document.getElementById('productDetailDesc').textContent = post.Product?.Description || 'No description available';
+
+    const orderBtn = document.getElementById('productDetailOrderBtn');
+    if (orderBtn) orderBtn.disabled = remainingQty <= 0;
 
     const modal = new bootstrap.Modal(document.getElementById('productDetailModal'));
     modal.show();
 }
 
+// ──────────────────────────────────────────────────────────────
+//  PLACE ORDER (Captain ordering a product, mirrors user-app.js)
+// ──────────────────────────────────────────────────────────────
+let currentOrderPost = null;
 
+function openPlaceOrderModal(postId) {
+    const id = postId !== undefined ? postId : currentDetailPostId;
+    currentOrderPost = allPosts.find(p => p.ID === id);
+    if (!currentOrderPost) return;
 
+    bootstrap.Modal.getInstance(document.getElementById('productDetailModal'))?.hide();
 
+    document.getElementById('placeOrderMessage').innerHTML = '';
+    document.getElementById('placeOrderProductName').textContent = currentOrderPost.Product?.Name || 'Product';
+    document.getElementById('placeOrderPlant').textContent = currentOrderPost.Product?.Project?.Name ? `Plant: ${currentOrderPost.Product.Project.Name}` : '';
+    document.getElementById('placeOrderQuantity').value = 1;
+    document.getElementById('placeOrderAddress').value = '';
 
+    const remainingQty = currentOrderPost.RemainingQty !== undefined ? currentOrderPost.RemainingQty : (currentOrderPost.TotalQty || 0);
+    document.getElementById('placeOrderAvailableQty').textContent = `Available: ${remainingQty}`;
+    updatePlaceOrderTotal();
 
+    new bootstrap.Modal(document.getElementById('placeOrderModal')).show();
+}
+
+function updatePlaceOrderQuantity(change) {
+    const input = document.getElementById('placeOrderQuantity');
+    const maxQty = currentOrderPost ? (currentOrderPost.RemainingQty !== undefined ? currentOrderPost.RemainingQty : (currentOrderPost.TotalQty || 0)) : 1;
+    let quantity = (parseInt(input.value) || 1) + change;
+    if (quantity < 1) quantity = 1;
+    if (quantity > maxQty) quantity = maxQty;
+    input.value = quantity;
+    updatePlaceOrderTotal();
+}
+
+function updatePlaceOrderTotal() {
+    if (!currentOrderPost) return;
+    const quantity = parseInt(document.getElementById('placeOrderQuantity').value) || 1;
+    document.getElementById('placeOrderTotal').textContent = formatCurrency(quantity * (currentOrderPost.Price || 0));
+}
+
+async function submitPlaceOrder() {
+    if (!currentOrderPost) return;
+
+    const quantity = parseInt(document.getElementById('placeOrderQuantity').value) || 1;
+    const address = document.getElementById('placeOrderAddress').value.trim();
+
+    if (!address) {
+        document.getElementById('placeOrderMessage').innerHTML =
+            '<div class="alert alert-danger py-2">Please enter a delivery address</div>';
+        return;
+    }
+
+    const orderData = {
+        postId: currentOrderPost.ID,
+        productId: currentOrderPost.ProductID || currentOrderPost.Product?.ID,
+        userId: currentUser.id,
+        orderQuantity: quantity,
+        totalPrice: quantity * (currentOrderPost.Price || 0),
+        orderStatus: 'PENDING',
+        address: address
+    };
+
+    try {
+        const data = await apiRequest('/orders', 'POST', orderData);
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('placeOrderModal')).hide();
+            showToast('Order placed successfully!', 'success');
+            loadAllData();
+        } else {
+            document.getElementById('placeOrderMessage').innerHTML =
+                `<div class="alert alert-danger py-2">${data.error || data.message || 'Failed to place order'}</div>`;
+        }
+    } catch (error) {
+        document.getElementById('placeOrderMessage').innerHTML =
+            `<div class="alert alert-danger py-2">${error.message}</div>`;
+    }
+}

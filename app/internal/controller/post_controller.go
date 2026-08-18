@@ -16,6 +16,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// allowedImageExtensions is the upload allowlist for product images.
+// Anything else (e.g. .html, .svg, .php) is rejected so the /uploads
+// static route can't be used to serve attacker-controlled markup/scripts.
+var allowedImageExtensions = map[string]bool{
+	".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true,
+}
+
 // Helper function to parse form values
 func parseFormValue(valueStr string, target interface{}) error {
 	switch target := target.(type) {
@@ -70,6 +77,12 @@ func CreatePost(c *gin.Context) {
 	// Handle file upload
 	file, err := c.FormFile("ProductImg")
 	if err == nil && file != nil {
+		ext := strings.ToLower(filepath.Ext(file.Filename))
+		if !allowedImageExtensions[ext] {
+			c.JSON(http.StatusBadRequest, utils.ErrorResponse("Invalid input", "Only image files (jpg, jpeg, png, gif, webp) are allowed"))
+			return
+		}
+
 		// Create uploads directory if it doesn't exist
 		uploadsDir := "uploads"
 		if err := os.MkdirAll(uploadsDir, 0755); err != nil {
@@ -78,7 +91,6 @@ func CreatePost(c *gin.Context) {
 		}
 
 		// Generate unique filename
-		ext := filepath.Ext(file.Filename)
 		filename := fmt.Sprintf("%d_%s%s", time.Now().Unix(), "post_image", ext)
 		filepath := filepath.Join(uploadsDir, filename)
 

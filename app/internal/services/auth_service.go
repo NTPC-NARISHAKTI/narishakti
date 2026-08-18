@@ -18,9 +18,11 @@ func RegisterUser(user *models.User, confirmPassword string) (*models.User, erro
 		return nil, errors.New("email already exists")
 	}
 
-	// Check duplicate EmpNo
-	if _, err := repositories.GetUserByEmpNo(user.EmpNo); err == nil {
-		return nil, errors.New("emp id already exists")
+	// Check duplicate EmpNo (only when provided - EmpNo is optional)
+	if user.EmpNo != nil && *user.EmpNo != "" {
+		if _, err := repositories.GetUserByEmpNo(*user.EmpNo); err == nil {
+			return nil, errors.New("emp id already exists")
+		}
 	}
 
 	hashed, err := utils.HashPassword(user.PasswordHash)
