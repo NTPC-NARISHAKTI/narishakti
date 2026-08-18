@@ -39,6 +39,7 @@ func SetupRoutes(r *gin.Engine) {
 	admin.Use(middleware.RoleMiddleware("ADMIN"))
 	admin.PATCH("/users/:id/approve", controllers.ApproveUser)
 	admin.PATCH("/users/:id/reject", controllers.RejectUser)
+	admin.PATCH("/users/:id/reset-password", controllers.AdminResetPassword)
 
 	// Captain user approval routes
 	captain := auth.Group("/captain")
@@ -86,5 +87,7 @@ func SetupRoutes(r *gin.Engine) {
 	// Auth routes Public
 	api.POST("/register", controllers.Register)
 	api.POST("/login", controllers.Login)
+	auth.POST("/logout", controllers.Logout)
 	auth.GET("/me", controllers.GetCurrentUser)
+	auth.POST("/change-password", controllers.ChangePassword)
 }

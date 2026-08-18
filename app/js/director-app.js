@@ -272,13 +272,90 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     }
 });
 
-function logout() {
+async function logout() {
+    try {
+        if (authToken) {
+            await fetch(`${API_URL}/logout`, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+    }
+    
     authToken = null;
     currentUser = {};
     localStorage.removeItem('authToken');
     localStorage.removeItem('currentUser');
-    showAuth();
-    document.getElementById('loginForm').reset();
+    // Logout always returns to the community marketplace/login, not the
+    // Director dashboard's own login screen.
+    window.location.href = 'user.html';
+}
+
+// Force a fresh auth check if this page is restored from the
+// back/forward cache after logout, instead of showing stale
+// authenticated UI from memory.
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        window.location.reload();
+    }
+});
+
+function togglePasswordVisibility(btn) {
+    const input = btn.previousElementSibling;
+    if (!input) return;
+    const icon = btn.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'bi bi-eye';
+    }
+}
+
+function showForgotPasswordNotice(event) {
+    event.preventDefault();
+    const notice = document.getElementById('forgotPasswordNotice');
+    if (notice) notice.style.display = 'block';
+}
+
+function openChangePasswordModal() {
+    document.getElementById('changePasswordMessage').innerHTML = '';
+    document.getElementById('currentPasswordInput').value = '';
+    document.getElementById('newPasswordInput').value = '';
+    new bootstrap.Modal(document.getElementById('changePasswordModal')).show();
+}
+
+async function submitChangePassword() {
+    const currentPassword = document.getElementById('currentPasswordInput').value;
+    const newPassword = document.getElementById('newPasswordInput').value;
+
+    if (!currentPassword || !newPassword) {
+        showMessage('changePasswordMessage', 'Please fill in both fields', 'danger');
+        return;
+    }
+    if (newPassword.length < 6) {
+        showMessage('changePasswordMessage', 'New password must be at least 6 characters', 'danger');
+        return;
+    }
+
+    try {
+        const data = await apiCall('/change-password', 'POST', { currentPassword, newPassword });
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
+            showToast('Password changed successfully. Please log in again.', 'success');
+            logout();
+        } else {
+            showMessage('changePasswordMessage', data.error || data.message || 'Failed to change password', 'danger');
+        }
+    } catch (error) {
+        showMessage('changePasswordMessage', 'Error: ' + error.message, 'danger');
+    }
 }
 
 function showMessage(elId, text, type = 'info') {
