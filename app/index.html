@@ -305,7 +305,16 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Password</label>
-                            <input type="password" class="form-control" id="loginPassword" required>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="loginPassword" required>
+                                <button type="button" class="btn btn-outline-secondary" onclick="togglePasswordVisibility(this)" tabindex="-1"><i class="bi bi-eye"></i></button>
+                            </div>
+                            <div class="mt-1">
+                                <a href="#" class="small" onclick="showForgotPasswordNotice(event)">Forgot password?</a>
+                            </div>
+                            <div id="forgotPasswordNotice" class="form-text text-muted" style="display:none;">
+                                Password resets are handled by your Administrator. Please contact them directly to reset your password.
+                            </div>
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Login</button>
                     </form>
@@ -319,8 +328,8 @@
                             <input type="text" class="form-control" id="registerName" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Employee ID</label>
-                            <input type="text" class="form-control" id="registerEmpNo" required>
+                            <label class="form-label">Employee ID <span class="text-muted">(optional)</span></label>
+                            <input type="text" class="form-control" id="registerEmpNo">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Email</label>
@@ -328,11 +337,17 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Password</label>
-                            <input type="password" class="form-control" id="registerPassword" required>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="registerPassword" required>
+                                <button type="button" class="btn btn-outline-secondary" onclick="togglePasswordVisibility(this)" tabindex="-1"><i class="bi bi-eye"></i></button>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Confirm Password</label>
-                            <input type="password" class="form-control" id="registerConfirmPassword" required>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="registerConfirmPassword" required>
+                                <button type="button" class="btn btn-outline-secondary" onclick="togglePasswordVisibility(this)" tabindex="-1"><i class="bi bi-eye"></i></button>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Project</label>
@@ -368,6 +383,7 @@
             <a href="#" onclick="switchSection('inventories')" class="sidebar-link"><i class="bi bi-list"></i> Inventories</a>
             <a href="#" onclick="switchSection('orders')" class="sidebar-link"><i class="bi bi-cart"></i> Orders</a>
             <a href="#" onclick="switchSection('logs')" class="sidebar-link"><i class="bi bi-journal-text"></i> Logs</a>
+            <a href="#" onclick="openChangePasswordModal()" class="sidebar-link"><i class="bi bi-key"></i> Change Password</a>
             <hr style="background-color: #34495e;">
             <a href="#" onclick="logout()" class="sidebar-link"><i class="bi bi-box-arrow-right"></i> Logout</a>
         </div>
@@ -380,7 +396,41 @@
                 <div>
                     <span id="userInfo" class="me-3">Welcome, <strong>User</strong></span>
                     <span id="currentUserRole" class="badge bg-secondary me-3">Role: USER</span>
+                    <button onclick="openChangePasswordModal()" class="btn btn-outline-secondary btn-sm me-2"><i class="bi bi-key"></i> Change Password</button>
                     <button onclick="logout()" class="btn btn-outline-danger btn-sm">Logout</button>
+                </div>
+            </div>
+
+            <!-- Change Password Modal -->
+            <div class="modal fade" id="changePasswordModal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class="bi bi-key"></i> Change Password</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="changePasswordMessage"></div>
+                            <div class="mb-3">
+                                <label class="form-label">Current Password</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="currentPasswordInput">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="togglePasswordVisibility(this)" tabindex="-1"><i class="bi bi-eye"></i></button>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">New Password</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="newPasswordInput" minlength="6">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="togglePasswordVisibility(this)" tabindex="-1"><i class="bi bi-eye"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" onclick="submitChangePassword()">Change Password</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -455,11 +505,17 @@
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Password</label>
-                                <input type="password" class="form-control" id="userPassword" required>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="userPassword" required>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="togglePasswordVisibility(this)" tabindex="-1"><i class="bi bi-eye"></i></button>
+                                </div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Confirm Password</label>
-                                <input type="password" class="form-control" id="userConfirmPassword" required>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="userConfirmPassword" required>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="togglePasswordVisibility(this)" tabindex="-1"><i class="bi bi-eye"></i></button>
+                                </div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Role</label>
@@ -999,13 +1055,98 @@
             }
         });
 
-        function logout() {
+        async function logout() {
+            try {
+                if (authToken) {
+                    await fetch(`${API_URL}/logout`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+
             authToken = null;
             currentUser = {};
             localStorage.removeItem('authToken');
             localStorage.removeItem('currentUser');
-            showAuth();
-            document.getElementById('loginForm').reset();
+            // Logout always returns to the community marketplace/login,
+            // not the admin portal's own login screen.
+            window.location.href = 'user.html';
+        }
+
+        // Force a fresh auth check if this page is restored from the
+        // back/forward cache after logout, instead of showing stale
+        // authenticated UI from memory.
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+
+        function togglePasswordVisibility(btn) {
+            const input = btn.previousElementSibling;
+            if (!input) return;
+            const icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'bi bi-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'bi bi-eye';
+            }
+        }
+
+        function showForgotPasswordNotice(event) {
+            event.preventDefault();
+            const notice = document.getElementById('forgotPasswordNotice');
+            if (notice) notice.style.display = 'block';
+        }
+
+        function openChangePasswordModal() {
+            document.getElementById('changePasswordMessage').innerHTML = '';
+            document.getElementById('currentPasswordInput').value = '';
+            document.getElementById('newPasswordInput').value = '';
+            new bootstrap.Modal(document.getElementById('changePasswordModal')).show();
+        }
+
+        async function submitChangePassword() {
+            const currentPassword = document.getElementById('currentPasswordInput').value;
+            const newPassword = document.getElementById('newPasswordInput').value;
+
+            if (!currentPassword || !newPassword) {
+                showMessage('changePasswordMessage', 'Please fill in both fields', 'danger');
+                return;
+            }
+            if (newPassword.length < 6) {
+                showMessage('changePasswordMessage', 'New password must be at least 6 characters', 'danger');
+                return;
+            }
+
+            try {
+                const data = await apiCall('/change-password', 'POST', { currentPassword, newPassword });
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
+                    showToastOrAlert('Password changed successfully. Please log in again.');
+                    logout();
+                } else {
+                    showMessage('changePasswordMessage', data.error || data.message || 'Failed to change password', 'danger');
+                }
+            } catch (error) {
+                showMessage('changePasswordMessage', 'Error: ' + error.message, 'danger');
+            }
+        }
+
+        function showToastOrAlert(message) {
+            if (typeof showToast === 'function') {
+                showToast(message, 'success');
+            } else {
+                alert(message);
+            }
         }
 
         function showAuth() {
@@ -1169,9 +1310,10 @@
                         <td><span class="badge badge-custom ${user.ApprovalStatus && user.ApprovalStatus.toUpperCase() === 'APPROVED' ? 'bg-success' : 'bg-warning'}">${user.ApprovalStatus || 'PENDING'}</span></td>
                         <td>
                             <button class="btn btn-sm btn-warning" onclick="editUser(${user.ID})">Edit</button>
-                            ${user.ApprovalStatus && user.ApprovalStatus.toUpperCase() === 'PENDING' ? 
+                            <button class="btn btn-sm btn-secondary" onclick="resetUserPassword(${user.ID})" title="Reset this user's password">Reset Password</button>
+                            ${user.ApprovalStatus && user.ApprovalStatus.toUpperCase() === 'PENDING' ?
                                 `<button class="btn btn-sm btn-success" onclick="approveUser(${user.ID})">Approve</button>
-                                 <button class="btn btn-sm btn-danger" onclick="rejectUser(${user.ID})">Reject</button>` : 
+                                 <button class="btn btn-sm btn-danger" onclick="rejectUser(${user.ID})">Reject</button>` :
                                 ''}
                             <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.ID})">Delete</button>
                         </td>
@@ -1286,6 +1428,29 @@
                 await apiCall(`/users/${id}`, 'DELETE');
                 showMessage('usersMessage', 'User deleted', 'success');
                 loadUsers();
+            } catch (error) {
+                showMessage('usersMessage', 'Error: ' + error.message, 'danger');
+            }
+        }
+
+        // Realistic "forgot password" support: there is no email/OTP/SMTP
+        // infrastructure in this app, so an admin sets a new password
+        // directly and relays it to the user through an existing offline
+        // channel (this mirrors the existing approve/reject admin pattern).
+        async function resetUserPassword(id) {
+            const newPassword = prompt('Enter a new password for this user (min 6 characters):');
+            if (newPassword === null) return;
+            if (newPassword.length < 6) {
+                alert('Password must be at least 6 characters');
+                return;
+            }
+            try {
+                const data = await apiCall(`/admin/users/${id}/reset-password`, 'PATCH', { newPassword });
+                if (data.success) {
+                    showMessage('usersMessage', 'Password reset successfully', 'success');
+                } else {
+                    showMessage('usersMessage', data.error || data.message || 'Failed to reset password', 'danger');
+                }
             } catch (error) {
                 showMessage('usersMessage', 'Error: ' + error.message, 'danger');
             }

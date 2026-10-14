@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"marketplace/internal/database"
 	"marketplace/internal/utils"
 
 	"github.com/gin-gonic/gin"
@@ -21,9 +22,6 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString == authHeader {
-			tokenString = authHeader
-		}
 
 		claims := jwt.MapClaims{}
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
@@ -32,6 +30,13 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		if err != nil || !token.Valid {
 			c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "Invalid token"))
+			c.Abort()
+			return
+		}
+
+		// Check if token is blacklisted (logged out / password changed)
+		if database.IsTokenBlacklisted(tokenString) {
+			c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Unauthorized", "Token has been revoked"))
 			c.Abort()
 			return
 		}

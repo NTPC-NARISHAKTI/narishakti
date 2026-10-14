@@ -1,10 +1,15 @@
-version: "3.9"
-
 services:
   app:
     build: ./app
     restart: unless-stopped
     container_name: marketplace-app
+    environment:
+      DB_HOST: postgres
+      DB_USER: ${POSTGRES_USER:-marketplace_user}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-narishakti_db_admin}
+      DB_NAME: ${POSTGRES_DB:-marketplace}
+      DB_PORT: "5432"
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key}
     ports:
       - "8080:8080"
     depends_on:
@@ -16,9 +21,9 @@ services:
     image: postgres:16
     container_name: marketplace-postgres
     environment:
-      POSTGRES_USER: marketplace_user
-      POSTGRES_PASSWORD: narishakti_db_admin
-      POSTGRES_DB: marketplace
+      POSTGRES_USER: ${POSTGRES_USER:-marketplace_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-narishakti_db_admin}
+      POSTGRES_DB: ${POSTGRES_DB:-marketplace}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:

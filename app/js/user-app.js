@@ -97,7 +97,7 @@ function createProductCard(post, role = 'user') {
                 </div>
                 <div class="product-extra-info" id="productInfo-${post.ID}" hidden>
                     <p>${post.Product?.Description || 'No description available'}</p>
-                    ${projectName ? `<span><i class="bi bi-building"></i> ${projectName}</span>` : ''}
+                    ${projectName ? `<span><i class="bi bi-building"></i> Plant: ${projectName}</span>` : ''}
                 </div>
                 <div class="product-actions">
                     <button class="btn btn-primary btn-order" onclick="openOrderModal(${post.ID})">
@@ -346,13 +346,89 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
     }
 });
 
-function logout() {
+async function logout() {
+    try {
+        if (authToken) {
+            await fetch(`${API_URL}/logout`, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+    }
+    
     authToken = null;
     currentUser = {};
     localStorage.removeItem('authToken');
     localStorage.removeItem('currentUser');
     showAuth();
     document.getElementById('loginForm').reset();
+}
+
+// Force a fresh auth check if this page is restored from the
+// back/forward cache after logout, instead of showing stale
+// authenticated UI from memory.
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        window.location.reload();
+    }
+});
+
+function togglePasswordVisibility(btn) {
+    const input = btn.previousElementSibling;
+    if (!input) return;
+    const icon = btn.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'bi bi-eye';
+    }
+}
+
+function showForgotPasswordNotice(event) {
+    event.preventDefault();
+    const notice = document.getElementById('forgotPasswordNotice');
+    if (notice) notice.style.display = 'block';
+}
+
+function openChangePasswordModal() {
+    document.getElementById('changePasswordMessage').innerHTML = '';
+    document.getElementById('currentPasswordInput').value = '';
+    document.getElementById('newPasswordInput').value = '';
+    new bootstrap.Modal(document.getElementById('changePasswordModal')).show();
+}
+
+async function submitChangePassword() {
+    const currentPassword = document.getElementById('currentPasswordInput').value;
+    const newPassword = document.getElementById('newPasswordInput').value;
+
+    if (!currentPassword || !newPassword) {
+        showMessage('changePasswordMessage', 'Please fill in both fields', 'danger');
+        return;
+    }
+    if (newPassword.length < 6) {
+        showMessage('changePasswordMessage', 'New password must be at least 6 characters', 'danger');
+        return;
+    }
+
+    try {
+        const data = await apiCall('/change-password', 'POST', { currentPassword, newPassword });
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
+            showToast('Password changed successfully. Please log in again.', 'success');
+            logout();
+        } else {
+            showMessage('changePasswordMessage', data.error || data.message || 'Failed to change password', 'danger');
+        }
+    } catch (error) {
+        showMessage('changePasswordMessage', 'Error: ' + error.message, 'danger');
+    }
 }
 
 // ===================================
@@ -767,6 +843,7 @@ function openOrderModal(postId) {
         <div class="info-details">
             <h6>${currentPost.Product?.Name || 'Product'}</h6>
             <p class="price">${formatCurrency(currentPost.Price)}</p>
+            ${currentPost.Product?.Project?.Name ? `<p class="text-muted small mb-0">Plant: ${currentPost.Product.Project.Name}</p>` : ''}
         </div>
     `;
     
